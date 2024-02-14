@@ -9,31 +9,44 @@ import subprocess
 import glob
 import json
 import shutil
+from pathlib import Path
 
 print(datetime.now())
-print(os.path.realpath(os.getcwd()))
+print(Path.cwd().resolve())
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Script to process FASTA files and generate output graphs.')
 parser.add_argument('fasta_filename', help='The FASTA file to process.')
-parser.add_argument('output_graph_name', help='The name of the output graph file.')
-parser.add_argument('output_dir_name', help='The name of the output directory.')
+parser.add_argument('-o', '--output_graph_name', help='The name of the output graph file. Defaults to the base name of the input file.', default=None)
+parser.add_argument('-d', '--output_dir_name', help='The name of the output directory. Defaults to a directory named after the input file.', default=None)
 
-# Parse arguments
+# Parse arguments using pathlib for path arguments
 args = parser.parse_args()
+fasta_filename = Path(args.fasta_filename)
+base_name = fasta_filename.stem
+output_graph_name = args.output_graph_name if args.output_graph_name else base_name
+output_dir = Path(args.output_dir_name if args.output_dir_name else f"{base_name}_output").resolve()
+
 
 # Assign arguments to variables
 fasta_filename = args.fasta_filename
-output_graph_name = args.output_graph_name
-output_dir_name = os.path.realpath(os.getcwd()) + "/" + args.output_dir_name
-
+base_name = os.path.splitext(os.path.basename(fasta_filename))[0]
+output_graph_name = args.output_graph_name if args.output_graph_name else base_name
+output_dir_name = args.output_dir_name if args.output_dir_name else os.path.join(os.path.realpath(os.getcwd()), base_name + "_output")
 # Make temporary directory
 tmp_dir = tempfile.mkdtemp(prefix='vg-')
 print(f"Temporary directory: {tmp_dir}")
 
-os.mkdir(output_dir_name)
-os.chdir(tmp_dir)
-os.mkdir('fasta_files')
-os.mkdir('alignments')
+#os.mkdir(output_dir_name)
+output_dir.mkdir(parents=True, exist_ok=True)
+#os.chdir(tmp_dir)
+Path(tmp_dir).mkdir(parents=True, exist_ok=True)
+os.chdir(Path(tmp_dir))
+#os.mkdir('fasta_files')
+Path('fasta_files').mkdir(exist_ok=True)
+#os.mkdir('alignments')
+Path('alignments').mkdir(exist_ok=True)
+
+
 
 
 # Split fasta file into individual sequences and save to the fasta_files/ dir
@@ -62,8 +75,10 @@ subprocess.run(f"vg construct -M fasta_files/{random_file} > graph.vg", shell=Tr
 subprocess.run(f"vg circularize -p {name} graph.vg > graph_circ.vg", shell=True)
 subprocess.run(f"vg stats -z graph_circ.vg", shell=True)
 
-os.remove("graph.vg")
-os.remove(f"fasta_files/{random_file}")
+#os.remove("graph.vg")
+#os.remove(f"fasta_files/{random_file}")
+Path("graph.vg").unlink(missing_ok=True)
+Path(f"fasta_files/{random_file}").unlink(missing_ok=True)
 os.chdir("fasta_files")
 
 for i in range(1, nr):
@@ -110,16 +125,23 @@ for i in range(1, nr):
   # Augment graph with that sequence
     subprocess.run(f"vg augment -i -S {tmp_dir}/graph_circ.vg {tmp_dir}/alignments/{best_file}.gam  > {tmp_dir}/graph_aug.vg", shell=True)
 
-    subprocess.run(f"rm {tmp_dir}/fasta_files/{best_file}", shell=True)
+    #subprocess.run(f"rm {tmp_dir}/fasta_files/{best_file}", shell=True)
+    os.remove(os.path.join(tmp_dir, "fasta_files", best_file))
     subprocess.run(f"mv {tmp_dir}/graph_aug.vg {tmp_dir}/graph_circ.vg", shell=True)
 
     subprocess.run(f"vg stats -z {tmp_dir}/graph_circ.vg", shell=True)
 
     # Clear the alignments dir for the next round
-    subprocess.run(f"rm {tmp_dir}/alignments/*", shell=True)
+    #could do rmtree followed by mkdir instead
+    #for file in os.listdir(os.path.join(tmp_dir, "alignments")):
+        #os.remove(os.path.join(tmp_dir, "alignments", file))
+    for file in Path(tmp_dir).joinpath("alignments").iterdir():
+        file.unlink(missing_ok=True)
 
 # Move the graph file to the output directory
-shutil.move(f"{tmp_dir}/graph_circ.vg", f"{output_dir_name}/{output_graph_name}.vg")
+#shutil.move(f"{tmp_dir}/graph_circ.vg", f"{output_dir_name}/{output_graph_name}.vg")
+#shutil.move(os.path.join(tmp_dir, "graph_circ.vg"), os.path.join(output_dir_name, f"{output_graph_name}.vg"))
+shutil.move(Path(tmp_dir).joinpath("graph_circ.vg"), output_dir.joinpath(f"{output_graph_name}.vg"))
 
 # Change to the new directory
 os.chdir(output_dir_name)
