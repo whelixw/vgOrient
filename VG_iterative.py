@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 import tempfile
 from datetime import datetime
 import random
@@ -8,79 +9,130 @@ import subprocess
 import glob
 import json
 import shutil
-import argparse  # Import the argparse module
 
-# Function to parse command-line arguments
-def parse_args():
-    parser = argparse.ArgumentParser(description='Process fasta file and generate graph.')
-    parser.add_argument('fasta_filename', type=str, help='Fasta filename')
-    parser.add_argument('--output_graph_name', type=str, default='output_graph', help='Output graph name (default: output_graph)')
-    parser.add_argument('--output_dir', type=str, default=os.path.join(os.path.realpath(os.getcwd()), 'output_dir'), help='Output directory (default: ./output_dir)')
-    return parser.parse_args()
+print(datetime.now())
+print(os.path.realpath(os.getcwd()))
+# Set up argument parser
+parser = argparse.ArgumentParser(description='Script to process FASTA files and generate output graphs.')
+parser.add_argument('fasta_filename', help='The FASTA file to process.')
+parser.add_argument('output_graph_name', help='The name of the output graph file.')
+parser.add_argument('output_dir_name', help='The name of the output directory.')
 
-def main():
-    args = parse_args()  # Parse arguments
+# Parse arguments
+args = parser.parse_args()
 
-    # Convert relative paths to absolute paths
-    args.fasta_filename = os.path.abspath(args.fasta_filename)
-    args.output_dir = os.path.abspath(args.output_dir)
+# Assign arguments to variables
+fasta_filename = args.fasta_filename
+output_graph_name = args.output_graph_name
+output_dir_name = os.path.realpath(os.getcwd()) + "/" + args.output_dir_name
 
-    print(datetime.now())
-    print(os.path.realpath(os.getcwd()))
+# Make temporary directory
+tmp_dir = tempfile.mkdtemp(prefix='vg-')
+print(f"Temporary directory: {tmp_dir}")
 
-    print(f"Processing file: {args.fasta_filename}")
-    print(f"Output directory: {args.output_dir}")
+os.mkdir(output_dir_name)
+os.chdir(tmp_dir)
+os.mkdir('fasta_files')
+os.mkdir('alignments')
 
-    # Create output directory if it does not exist
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
 
-    # Make temporary directory
-    tmp_dir = tempfile.mkdtemp(prefix='vg-')
-    print(f"Temporary directory: {tmp_dir}")
+# Split fasta file into individual sequences and save to the fasta_files/ dir
+# Count number of sequences in fasta file
+if fasta_filename.endswith(".gz"):
+    nr = subprocess.check_output(f"zcat {fasta_filename} | grep '>' -c", shell=True, text=True)
+    subprocess.call(f"zcat {fasta_filename} | awk 'BEGIN {{n_seq=0;}} /^>/ {{if(n_seq%1==0){{file=sprintf(\"fasta_files/seq_%d.fa\",n_seq);}} print >> file; n_seq++; next;}} {{ print >> file; }}'", shell=True)
+else:
+    nr = subprocess.check_output(f"grep '>' {fasta_filename} -c", shell=True, text=True)
+    subprocess.call(f"cat {fasta_filename} | awk 'BEGIN {{n_seq=0;}} /^>/ {{if(n_seq%1==0){{file=sprintf(\"fasta_files/seq_%d.fa\",n_seq);}} print >> file; n_seq++; next;}} {{ print >> file; }}'", shell=True)
 
-    os.chdir(tmp_dir)
-    os.makedirs('fasta_files')
-    os.makedirs('alignments')
+nr = int(nr.strip())
+print("Number of sequences in total: ", nr)
 
-    # Split fasta file into individual sequences and save to the fasta_files/ dir
-    # Count number of sequences in fasta file
-    if args.fasta_filename.endswith(".gz"):
-        nr = subprocess.check_output(f"zcat {args.fasta_filename} | grep '>' -c", shell=True, text=True)
-        subprocess.call(f"zcat {args.fasta_filename} | awk 'BEGIN {{n_seq=0;}} /^>/ {{if(n_seq%1==0){{file=sprintf(\"fasta_files/seq_%d.fa\",n_seq);}} print >> file; n_seq++; next;}} {{ print >> file; }}'", shell=True)
-    else:
-        nr = subprocess.check_output(f"grep '>' {args.fasta_filename} -c", shell=True, text=True)
-        subprocess.call(f"cat {args.fasta_filename} | awk 'BEGIN {{n_seq=0;}} /^>/ {{if(n_seq%1==0){{file=sprintf(\"fasta_files/seq_%d.fa\",n_seq);}} print >> file; n_seq++; next;}} {{ print >> file; }}'", shell=True)
+os.chdir("fasta_files")
 
-    nr = int(nr.strip())
-    print("Number of sequences in total: ", nr)
+# Choose a random file/sequence
+random_file = random.choice(os.listdir())
+name = re.search(r'^>[a-zA-Z0-9_.]+', open(random_file).read()).group(0)[1:]
+print("Choosing file {} ({}) to build graph from".format(random_file, name))
 
-    os.chdir("fasta_files")
+os.chdir("..")
 
-    # Choose a random file/sequence
-    random_file = random.choice(os.listdir())
-    name = re.search(r'^>[a-zA-Z0-9_.]+', open(random_file).read()).group(0)[1:]
-    print(f"Choosing file {random_file} ({name}) to build graph from")
+# Construct vg graph from the chosen file and circularize it
+subprocess.run(f"vg construct -M fasta_files/{random_file} > graph.vg", shell=True)
+subprocess.run(f"vg circularize -p {name} graph.vg > graph_circ.vg", shell=True)
+subprocess.run(f"vg stats -z graph_circ.vg", shell=True)
 
-    os.chdir("..")
+os.remove("graph.vg")
+os.remove(f"fasta_files/{random_file}")
+os.chdir("fasta_files")
 
-    # Construct vg graph from the chosen file and circularize it
-    subprocess.run(f"vg construct -M fasta_files/{random_file} > graph.vg", shell=True)
-    subprocess.run(f"vg circularize -p {name} graph.vg > graph_circ.vg", shell=True)
-    subprocess.run(f"vg stats -z graph_circ.vg", shell=True)
+for i in range(1, nr):
+    identity = 0
 
-    os.remove("graph.vg")
-    shutil.rmtree("fasta_files")
+    # Index graph
+    subprocess.run(f"vg index -x {tmp_dir}/graph_circ.xg {tmp_dir}/graph_circ.vg", shell=True)  # XG index
+    subprocess.run(f"vg prune -k 48 {tmp_dir}/graph_circ.vg > {tmp_dir}/graph_circ_pruned.vg", shell=True)
+    subprocess.run(f"vg index -g {tmp_dir}/graph_circ.gcsa -Z 400 {tmp_dir}/graph_circ_pruned.vg", shell=True)  # GCSA index
+    os.remove(f"{tmp_dir}/graph_circ_pruned.vg")
 
-    # Further processing steps...
+    for file in glob.glob("*.fa"):
+        # Extract path name
+        name = re.search(r'^>[a-zA-Z0-9_.]+', open(file).read()).group(0)[1:]
 
-    # Move the final graph file to the output directory and perform final operations
-    shutil.move(f"graph_circ.vg", os.path.join(args.output_dir, f"{args.output_graph_name}.vg"))
+        # convert mitogenome to a string and align to graph
+        with open(file) as f:
+            next(f)
+            mitogenome_str = f.read().replace('\n', '')
+        subprocess.run(f"vg map -s {mitogenome_str} -V {name} -g {tmp_dir}/graph_circ.gcsa -x {tmp_dir}/graph_circ.xg > {tmp_dir}/alignments/{file}.gam", shell=True)
 
-    # Perform clean-up and output conversion
-    # For example, convert the file to ODGI and GFA formats, and remove the temporary directory
+        # Run vg view command and capture output
+        command = f"vg view -a {tmp_dir}/alignments/{file}.gam"
+        output = subprocess.check_output(command, shell=True)
 
-    print(datetime.now())
+        # Extract identity using jq
+        data = json.loads(output)
+        try:
+            identity_new = data["identity"] # when encountering a file with no identity it crashes
+         # Set identity to 0.0 if it is "null"
+        except:
+            identity_new = 0.0
 
-if __name__ == "__main__":
-    main()
+        # Save the file with the highest %identity
+        if float(identity_new) >= identity:
+            identity = float(identity_new)
+            best_file = file
+            best_name = name
+
+        print(f"{file} ({name}) aligned with identity score {identity_new}")
+
+    print(f"{best_file} has the highest %identity {identity}")
+
+  # Augment graph with that sequence
+    subprocess.run(f"vg augment -i -S {tmp_dir}/graph_circ.vg {tmp_dir}/alignments/{best_file}.gam  > {tmp_dir}/graph_aug.vg", shell=True)
+
+    subprocess.run(f"rm {tmp_dir}/fasta_files/{best_file}", shell=True)
+    subprocess.run(f"mv {tmp_dir}/graph_aug.vg {tmp_dir}/graph_circ.vg", shell=True)
+
+    subprocess.run(f"vg stats -z {tmp_dir}/graph_circ.vg", shell=True)
+
+    # Clear the alignments dir for the next round
+    subprocess.run(f"rm {tmp_dir}/alignments/*", shell=True)
+
+# Move the graph file to the output directory
+shutil.move(f"{tmp_dir}/graph_circ.vg", f"{output_dir_name}/{output_graph_name}.vg")
+
+# Change to the new directory
+os.chdir(output_dir_name)
+
+# Convert the file to ODGI and GFA formats
+subprocess.run(f"vg_1.44.0 convert -o {output_graph_name}.vg > {output_graph_name}.odgi", shell=True)
+
+subprocess.run(f"vg convert -f {output_graph_name}.vg > {output_graph_name}.gfa", shell=True)
+
+# Remove the temporary directory
+os.system(f"rm -rf {tmp_dir}")
+
+# Print the current date and time
+print(datetime.now())
+
+
