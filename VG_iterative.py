@@ -25,6 +25,22 @@ def prepare_output_directory(base_name, specified_output_dir=None):
     output_dir = Path(specified_output_dir if specified_output_dir else f"{base_name}_output").resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
+def move_and_rename_vg_file(src_path, dest_dir, new_filename):
+    """
+    Move and rename a VG file from src_path to dest_dir with a new filename.
+    
+    :param src_path: Path of the source VG file.
+    :param dest_dir: Destination directory Path.
+    :param new_filename: New filename for the VG file.
+    """
+    try:
+        dest_path = dest_dir.joinpath(new_filename)
+        shutil.move(src_path, dest_path)
+        print(f"Moved and renamed VG file to {dest_path}")
+    except FileNotFoundError as e:
+        print(f"Error: Source file not found {src_path}")
+    except Exception as e:
+        print(f"Error moving {src_path} to {dest_dir}/{new_filename}: {e}")
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Script to process FASTA files and generate output graphs.')
@@ -153,7 +169,7 @@ for i in range(1, nr):
 #shutil.move(f"{tmp_dir}/graph_circ.vg", f"{output_dir_name}/{output_graph_name}.vg")
 #shutil.move(os.path.join(tmp_dir, "graph_circ.vg"), os.path.join(output_dir_name, f"{output_graph_name}.vg"))
 #shutil.move(Path(tmp_dir).joinpath("graph_circ.vg"), output_dir.joinpath(f"{output_graph_name}.vg"))
-
+move_and_rename_vg_file(Path(tmp_dir).joinpath("graph_circ.vg"), output_dir, f"{output_graph_name}.vg")
 # Change to the new directory
 os.chdir(output_dir_name)
 
