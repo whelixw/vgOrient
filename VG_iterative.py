@@ -101,14 +101,14 @@ random_file = graph_fasta  # Set this for output naming
 
 ## Choose a random file/sequence
 #random_file = random.choice(os.listdir())
-name = re.search(r'^>[a-zA-Z0-9_.]+', open(graph_fasta).read()).group(0)[1:]
-print("Choosing file {} ({}) to build graph from".format(graph_fasta, name))
+graph_name = re.search(r'^>[a-zA-Z0-9_.]+', open(graph_fasta).read()).group(0)[1:]
+print("Choosing file {} ({}) to build graph from".format(graph_fasta, graph_name))
 
 os.chdir("..")
 
 # Construct vg graph from the chosen file and circularize it
 subprocess.run(f"vg construct -M fasta_files/{random_file} > graph.vg", shell=True)
-subprocess.run(f"vg circularize -p {name} graph.vg > graph_circ.vg", shell=True)
+subprocess.run(f"vg circularize -p {graph_name} graph.vg > graph_circ.vg", shell=True)
 subprocess.run(f"vg stats -z graph_circ.vg", shell=True)
 
 #os.remove("graph.vg")
@@ -178,7 +178,7 @@ for i in range(1, nr):
 #shutil.move(f"{tmp_dir}/graph_circ.vg", f"{output_dir_name}/{output_graph_name}.vg")
 #shutil.move(os.path.join(tmp_dir, "graph_circ.vg"), os.path.join(output_dir_name, f"{output_graph_name}.vg"))
 #shutil.move(Path(tmp_dir).joinpath("graph_circ.vg"), output_dir.joinpath(f"{output_graph_name}.vg"))
-out_file = f"{output_graph_name}_{name}.vg"
+out_file = f"{output_graph_name}_{graph_name}.vg"
 move_and_rename_vg_file(Path(tmp_dir).joinpath("graph_circ.vg"), output_dir, out_file)
 # Change to the new directory
 os.chdir(output_dir_name)
