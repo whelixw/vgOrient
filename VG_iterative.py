@@ -45,6 +45,7 @@ def move_and_rename_vg_file(src_path, dest_dir, new_filename):
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Script to process FASTA files and generate output graphs.')
 parser.add_argument('fasta_filename', help='The FASTA file to process.')
+parser.add_argument('-gf', '--graph_fasta_file', help='Optional: The FASTA file to use as base for the graph. If not specified, a random file is chosen.', default=None)
 parser.add_argument('-o', '--output_graph_name', help='The name of the output graph file. Defaults to the base name of the input file.', default=None)
 parser.add_argument('-d', '--output_dir_name', help='The name of the output directory. Defaults to a directory named after the input file.', default=None)
 
@@ -90,10 +91,18 @@ print("Number of sequences in total: ", nr)
 
 os.chdir("fasta_files")
 
-# Choose a random file/sequence
-random_file = random.choice(os.listdir())
-name = re.search(r'^>[a-zA-Z0-9_.]+', open(random_file).read()).group(0)[1:]
-print("Choosing file {} ({}) to build graph from".format(random_file, name))
+
+if args.graph_fasta_file:
+    graph_fasta = args.graph_fasta_file
+else:
+    graph_fasta = random.choice(os.listdir())
+    #print(f"Randomly selected FASTA file: {graph_fasta}")
+random_file = graph_fasta  # Set this for output naming
+
+## Choose a random file/sequence
+#random_file = random.choice(os.listdir())
+name = re.search(r'^>[a-zA-Z0-9_.]+', open(graph_fasta).read()).group(0)[1:]
+print("Choosing file {} ({}) to build graph from".format(graph_fasta, name))
 
 os.chdir("..")
 
@@ -169,14 +178,15 @@ for i in range(1, nr):
 #shutil.move(f"{tmp_dir}/graph_circ.vg", f"{output_dir_name}/{output_graph_name}.vg")
 #shutil.move(os.path.join(tmp_dir, "graph_circ.vg"), os.path.join(output_dir_name, f"{output_graph_name}.vg"))
 #shutil.move(Path(tmp_dir).joinpath("graph_circ.vg"), output_dir.joinpath(f"{output_graph_name}.vg"))
-move_and_rename_vg_file(Path(tmp_dir).joinpath("graph_circ.vg"), output_dir, f"{output_graph_name}.vg")
+out_file = f"{output_graph_name}_{name}.vg"
+move_and_rename_vg_file(Path(tmp_dir).joinpath("graph_circ.vg"), output_dir, out_file)
 # Change to the new directory
 os.chdir(output_dir_name)
 
 # Convert the file to ODGI and GFA formats
-subprocess.run(f"vg_1.44.0 convert -o {output_graph_name}.vg > {output_graph_name}.odgi", shell=True)
+subprocess.run(f"vg_1.44.0 convert -o {out_file} > {output_graph_name}.odgi", shell=True)
 
-subprocess.run(f"vg convert -f {output_graph_name}.vg > {output_graph_name}.gfa", shell=True)
+subprocess.run(f"vg convert -f {out_file} > {output_graph_name}.gfa", shell=True)
 
 # Remove the temporary directory
 os.system(f"rm -rf {tmp_dir}")
