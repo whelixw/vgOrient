@@ -1,8 +1,11 @@
+#!/usr/bin/env python3
+import argparse
 class GFA:
     def __init__(self, file_path):
         self.dict_of_node_length = {}
         self.paths = {}
         self.load_gfa(file_path)
+        self.name = file_path
 
     def load_gfa(self, file_path):
         with open(file_path, "r") as f:
@@ -49,23 +52,29 @@ class GFA:
         return nodes_in_range
 
 
-# Load two GFA files into objects
-gfa1 = GFA("suina_2_MW534270.1.gfa")
-gfa2 = GFA("suina_2_DQ409327.1.gfa")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Process GFA files.")
+    parser.add_argument("gfa_paths", nargs=2, help="Paths to two GFA files.")
+    parser.add_argument("--node", "-n", help="Target node ID to find in all paths.")
+    parser.add_argument("--path", "-p", help="Target path name for finding nodes in a range.")
+    parser.add_argument("--start", "-s", type=int, help="Start index for range query.")
+    parser.add_argument("--end", "-e", type=int, help="End index for range query.")
 
-# Example usage:
+    args = parser.parse_args()
 
-# Find the start and end positions of a target node in all paths for both GFAs
-target_node = "3569"
-for gfa in [gfa1, gfa2]:
-    positions = gfa.find_node_positions(target_node)
-    for position in positions:
-        print(f"GFA: {position[0]}, Node: {position[1]}, Start: {position[2]}, End: {position[3]}")
+    # Load GFA files
+    gfa1 = GFA(args.gfa_paths[0])
+    gfa2 = GFA(args.gfa_paths[1])
 
-# Given a range of indices and a path, retrieve the nodes covered by those indices
-start_index = 14352
-end_index = 14456
-target_path = "DQ409327.1"
-for gfa in [gfa1, gfa2]:
-    nodes = gfa.find_nodes_in_range(start_index, end_index, target_path)
-    print(f"Nodes in range {start_index}-{end_index} for path {target_path} in GFA: {nodes}")
+    # Node positions query
+    if args.node:
+        for gfa in [gfa1, gfa2]:
+            positions = gfa.find_node_positions(args.node, args.path)
+            for position in positions:
+                print(f"File: {gfa.name}\nPath: {position[0]}, Node: {position[1]}, Start: {position[2]}, End: {position[3]}")
+
+    # Nodes in range query
+    if args.path and args.start is not None and args.end is not None:
+        for gfa in [gfa1, gfa2]:
+            nodes = gfa.find_nodes_in_range(args.start, args.end, args.path)
+            print(f"File: {gfa.name}\nNodes in range {args.start}-{args.end} for path {args.path} in GFA: {nodes}")
