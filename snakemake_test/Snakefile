@@ -15,56 +15,64 @@ rule vg_make_reference_map:
         vg prune -k 48 {output.vg} > {params.vg_pruned}
         vg index -g {output.gcsa} {params.vg_pruned}
         """
+
 rule vg_map_query:
     input:
-        ref_vg="results/{ref}_circ.vg",
-        ref_xg="results/{ref}_circ.xg",
-        ref_gcsa="results/{ref}_circ.gcsa",
+        ref_fasta="data/{ref}.fna",
         query_fasta="data/{query}.fna"
     output:
         gfa="results/{ref}__{query}_circ_map.gfa"
     params:
+        ref_vg="intermediate/{ref}_circ.vg",
+        ref_xg="intermediate/{ref}_circ.xg",
+        ref_gcsa="intermediate/{ref}_circ.gcsa",
         query_str="intermediate/{query}_str",
         map_gam="intermediate/{ref}_{query}_circ_map.gam",
         aug_vg="intermediate/{ref}_{query}_circ_map.vg"
     shell:
         """
+        vg construct -r {input.ref_fasta} > {params.ref_vg}
+        vg circularize -p {wildcards.ref} {params.ref_vg} > {params.ref_vg}
+        vg index -x {params.ref_xg} -g {params.ref_gcsa} {params.ref_vg}
         tail -n +2 {input.query_fasta} | tr -d '\n' > {params.query_str}
-        vg map -s $(cat {params.query_str}) -V {wildcards.ref} -g {input.ref_gcsa} -x {input.ref_xg} > {params.map_gam}
-        vg augment -i -S {input.ref_vg} {params.map_gam} > {params.aug_vg}
+        vg map -s $(<{params.query_str}) -V {wildcards.ref} -g {params.ref_gcsa} -x {params.ref_xg} > {params.map_gam}
+        vg augment -i -S {params.ref_vg} {params.map_gam} > {params.aug_vg}
         vg convert -f {params.aug_vg} > {output.gfa}
         """
-rule vg_construct_giraffe_reference:
-    input:
-        fasta="data/{ref_base}.fna"
-    output:
-        vg="results/{ref_base}_circ.vg",
-        gfa="results/{ref_base}_circ.gfa",
-        xg="results/{ref_base}_circ.xg",
-        giraffe_indexes=expand("results/{ref_base}_circ.{suffix}", suffix=["giraffe.gbz", "min", "dist"])
-    shell:
-        """
-        vg construct -r {input.fasta} > {output.vg}
-        vg circularize {output.vg} > {output.vg} # Note: This overwrites the original VG
-        vg convert -f {output.vg} > {output.gfa}
-        vg convert {output.vg} -x > {output.xg}
-        vg autoindex -p {wildcards.ref_base}_circ -w giraffe -g {output.gfa}
-        """
-rule vg_giraffe_align:
-    input:
-        xg="results/{ref_base}_circ.xg",
-        gbz="results/{ref_base}_circ.giraffe.gbz",
-        min="results/{ref_base}_circ.min",
-        dist="results/{ref_base}_circ.dist",
-        query_fq="data/{query_base}.fq"
-    output:
-        gam="results/{ref_base}__{query_base}_aligned.gam",
-        vg="results/{ref_base}__{query_base}_gf.vg",
-        gfa="results/{ref_base}__{query_base}_gf.gfa"
-    shell:
-        """
-        vg giraffe -x {input.xg} -g {input.gbz} -m {input.min} -d {input.dist} -f {input.query_fq} > {output.gam}
-        vg augment -i -S {input.xg.replace('_circ.xg', '_circ.vg')} {output.gam} > {output.vg}
-        vg convert -f {output.vg} > {output.gfa}
-        """
+ 
+# rule vg_construct_giraffe_reference:
+#     input:
+#         fasta="data/{ref}.fna"
+#     output:
+#         vg="results/{ref}_circ.vg",
+#         gfa="results/{ref}_circ.gfa",
+#         xg="results/{ref}_circ.xg",
+#         giraffe_indexes=expand("results/{ref}_circ.{suffix}", suffix=["giraffe.gbz", "min", "dist"])
+#      shell:
+#         """
+#         vg construct -r {input.fasta} > {output.vg}
+#         vg circularize {output.vg} > {output.vg}  # Note: This overwrites the original VG
+#         vg convert -f {output.vg} > {output.gfa}
+#         vg convert {output.vg} -x > {output.xg}
+#         vg autoindex -p {wildcards.ref}_circ -w giraffe -g {output.gfa}
+#         """
+# 
+# rule vg_giraffe_align:
+#     input:
+#         xg="results/{ref}_circ.xg",
+#         gbz="results/{ref}_circ.giraffe.gbz",
+#         min="results/{ref}_circ.min",
+#         dist="results/{ref}_circ.dist",
+#         query_fq="data/{sample}.fq"
+#     output:
+#         gam="results/{ref}__{sample}_aligned.gam",
+#         vg="results/{ref}__{sample}_gf.vg",
+#         gfa="results/{ref}__{sample}_gf.gfa"
+#     shell:
+#         """
+#         vg giraffe -x {input.xg} -g {input.gbz} -m {input.min} -d {input.dist} -f {input.query_fq} > {output.gam}
+#         vg augment -i -S {input.xg.replace('_circ.xg', '_circ.vg')} {output.gam} > {output.vg}
+#         vg convert -f {output.vg} > {output.gfa}
+#         """
+ 
 
