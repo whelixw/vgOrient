@@ -1,62 +1,68 @@
+rule fna_to_circ_vg:
+    input:
+        "data/{sample}.fna"
+    output:
+        "results/{sample}_circ.vg"
+    shell:
+        """
+        vg construct -r {input} > {wildcards.sample}_circ.vg
+        vg circularize {wildcards.sample}_circ.vg > {output}
+        """
+
 rule vg_make_reference_map:
     input:
-        fasta="data/{sample}.fna"
+        vg="results/{sample}_circ.vg"
     output:
-        vg="results/{sample}_circ.vg",
-        xg="results/{sample}_circ.xg",
-        gcsa="results/{sample}_circ.gcsa"
+        xg="intermediate/{sample}_circ.xg",
+        gcsa="intermediate/{sample}_circ.gcsa"
     params:
         vg_pruned="intermediate/{sample}_circ_pruned.vg"  # Using a separate directory for intermediate files
     shell:
         """
-        vg construct -r {input.fasta} > results/{wildcards.sample}.vg
-        vg circularize -p {wildcards.sample} results/{wildcards.sample}.vg > {output.vg}
-        vg index -x {output.xg} {output.vg}
+        vg index -x {output.xg} {input.vg}
         vg prune -k 48 {output.vg} > {params.vg_pruned}
         vg index -g {output.gcsa} {params.vg_pruned}
         """
 
 rule vg_map_query:
     input:
-        ref_fasta="data/{ref}.fna",
+        ref_vg="results/{ref}_circ.vg",
+        ref_xg="results/{ref}_circ.xg",
+        ref_gcsa="results/{ref}_circ.gcsa",
         query_fasta="data/{query}.fna"
     output:
-        gfa="results/{ref}__{query}_circ_map.gfa"
+        gfa="results/{ref}@{query}_circ_map.gfa"
     params:
-        ref_vg="intermediate/{ref}_circ.vg",
-        ref_xg="intermediate/{ref}_circ.xg",
-        ref_gcsa="intermediate/{ref}_circ.gcsa",
         query_str="intermediate/{query}_str",
         map_gam="intermediate/{ref}_{query}_circ_map.gam",
         aug_vg="intermediate/{ref}_{query}_circ_map.vg"
+    log:
+        "logs/{ref}_{query}_mapping.log"
     shell:
         """
-        vg construct -r {input.ref_fasta} > {params.ref_vg}
-        vg circularize -p {wildcards.ref} {params.ref_vg} > {params.ref_vg}
-        vg index -x {params.ref_xg} -g {params.ref_gcsa} {params.ref_vg}
-        tail -n +2 {input.query_fasta} | tr -d '\n' > {params.query_str}
-        vg map -s $(<{params.query_str}) -V {wildcards.ref} -g {params.ref_gcsa} -x {params.ref_xg} > {params.map_gam}
-        vg augment -i -S {params.ref_vg} {params.map_gam} > {params.aug_vg}
-        vg convert -f {params.aug_vg} > {output.gfa}
+        tail -n +2 {input.query_fasta} | tr -d '\n' > {params.query_str} 2>> {log}
+        vg map -s $(cat {params.query_str}) -x {input.ref_xg} -g {input.ref_gcsa} > {params.map_gam} 2>> {log}
+        vg augment -i -S {input.ref_vg} {params.map_gam} > {params.aug_vg} 2>> {log}
+        vg convert -f {params.aug_vg} > {output.gfa} 2>> {log}
         """
- 
-# rule vg_construct_giraffe_reference:
-#     input:
-#         fasta="data/{ref}.fna"
-#     output:
-#         vg="results/{ref}_circ.vg",
-#         gfa="results/{ref}_circ.gfa",
-#         xg="results/{ref}_circ.xg",
-#         giraffe_indexes=expand("results/{ref}_circ.{suffix}", suffix=["giraffe.gbz", "min", "dist"])
-#      shell:
-#         """
-#         vg construct -r {input.fasta} > {output.vg}
-#         vg circularize {output.vg} > {output.vg}  # Note: This overwrites the original VG
-#         vg convert -f {output.vg} > {output.gfa}
-#         vg convert {output.vg} -x > {output.xg}
-#         vg autoindex -p {wildcards.ref}_circ -w giraffe -g {output.gfa}
-#         """
-# 
+
+rule vg_construct_giraffe_reference:
+    input:
+        ref_vg="results/{ref}_circ.vg"
+    output:
+        gfa="results/{ref}@circ_gf.gfa",
+        xg="results/{ref}@circ_gf.xg",
+        gbz="results/{ref}@circ_gf.giraffe.gbz",
+        min="results/{ref}@circ_gf.min",
+        dist="results/{ref}@circ_gf.dist"
+    shell:
+        """
+        vg convert -f {input.ref_vg} > {output.gfa}
+        vg convert {input.ref_vg} -x > {output.xg}
+        vg autoindex -p {wildcards.ref}@circ_gf -w giraffe -g {output.gfa}
+        mv {wildcards.ref}@circ_gf* results
+        """
+
 # rule vg_giraffe_align:
 #     input:
 #         xg="results/{ref}_circ.xg",
