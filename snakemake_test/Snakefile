@@ -62,23 +62,33 @@ rule vg_construct_giraffe_reference:
         vg autoindex -p {wildcards.ref}@circ_gf -w giraffe -g {output.gfa}
         mv {wildcards.ref}@circ_gf* results
         """
-
-# rule vg_giraffe_align:
-#     input:
-#         xg="results/{ref}_circ.xg",
-#         gbz="results/{ref}_circ.giraffe.gbz",
-#         min="results/{ref}_circ.min",
-#         dist="results/{ref}_circ.dist",
-#         query_fq="data/{sample}.fq"
-#     output:
-#         gam="results/{ref}__{sample}_aligned.gam",
-#         vg="results/{ref}__{sample}_gf.vg",
-#         gfa="results/{ref}__{sample}_gf.gfa"
-#     shell:
-#         """
-#         vg giraffe -x {input.xg} -g {input.gbz} -m {input.min} -d {input.dist} -f {input.query_fq} > {output.gam}
-#         vg augment -i -S {input.xg.replace('_circ.xg', '_circ.vg')} {output.gam} > {output.vg}
-#         vg convert -f {output.vg} > {output.gfa}
-#         """
+rule vg_giraffe_align:
+    input:
+        xg="results/{ref}@circ_gf.xg",
+        gbz="results/{ref}@circ_gf.giraffe.gbz",
+        min="results/{ref}@circ_gf.min",
+        dist="results/{ref}@circ_gf.dist",
+        #vg=lambda wildcards: f"results/{wildcards.ref}@circ_gf.vg"
+        query_fq="data/{ref}.fq"
+    output:
+        gam="results/{ref}@{sample}_aligned.gam",
+        vg="results/{ref}@{sample}_gf.vg",
+        gfa="results/{ref}@{sample}_gf.gfa"
+    params:
+        vg_path=lambda wildcards: f"results/{wildcards.ref}@circ_gf.vg"
+    shell:
+        """
+        vg giraffe -x {input.xg} -g {input.gbz} -m {input.min} -d {input.dist} -f {input.query_fq} > {output.gam}
+        vg augment -i -S {params.vg_path} {output.gam} > {output.vg}
+        vg convert -f {output.vg} > {output.gfa}
+        """
  
-
+rule spoof_fq:
+    input:
+        fna="data/{sample}.fna"
+    output:
+        fq="data/{sample}.fq",
+    shell:
+        """
+	seqtk seq -F 'I' {input.fna} > {output.fq}
+        """
