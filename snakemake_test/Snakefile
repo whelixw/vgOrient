@@ -20,18 +20,18 @@ rule vg_make_reference_map:
     shell:
         """
         vg index -x {output.xg} {input.vg}
-        vg prune -k 48 {output.vg} > {params.vg_pruned}
+        vg prune -k 48 {input.vg} > {params.vg_pruned}
         vg index -g {output.gcsa} {params.vg_pruned}
         """
 
 rule vg_map_query:
     input:
         ref_vg="results/{ref}_circ.vg",
-        ref_xg="results/{ref}_circ.xg",
-        ref_gcsa="results/{ref}_circ.gcsa",
+        ref_xg="intermediate/{ref}_circ.xg",
+        ref_gcsa="intermediate/{ref}_circ.gcsa",
         query_fasta="data/{query}.fna"
     output:
-        gfa="results/{ref}@{query}_circ_map.gfa"
+        gfa="results/{ref}@{query}_map.gfa"
     params:
         query_str="intermediate/{query}_str",
         map_gam="intermediate/{ref}_{query}_circ_map.gam",
@@ -68,18 +68,20 @@ rule vg_giraffe_align:
         gbz="results/{ref}@circ_gf.giraffe.gbz",
         min="results/{ref}@circ_gf.min",
         dist="results/{ref}@circ_gf.dist",
-        #vg=lambda wildcards: f"results/{wildcards.ref}@circ_gf.vg"
-        query_fq="data/{ref}.fq"
+        query_fq="data/{sample}.fq",
+	sample_vg="results/{sample}_circ.vg",
+	reference_vg="results/{ref}_circ.vg"
     output:
         gam="results/{ref}@{sample}_aligned.gam",
         vg="results/{ref}@{sample}_gf.vg",
         gfa="results/{ref}@{sample}_gf.gfa"
     params:
-        vg_path=lambda wildcards: f"results/{wildcards.ref}@circ_gf.vg"
+        sample_name=lambda wc: wc.ref.replace("_circ", "")  # Adjust the sample name here
     shell:
         """
-        vg giraffe -x {input.xg} -g {input.gbz} -m {input.min} -d {input.dist} -f {input.query_fq} > {output.gam}
-        vg augment -i -S {params.vg_path} {output.gam} > {output.vg}
+        # Use {params.sample_name} to reference the corrected sample name within your shell commands
+        vg giraffe -x {input.xg} -g {input.gbz} -m {input.min} -d {input.dist} -f data/{params.sample_name}.fq > {output.gam}
+        vg augment -i -S results/{params.sample_name}_circ.vg {output.gam} > {output.vg}
         vg convert -f {output.vg} > {output.gfa}
         """
  
