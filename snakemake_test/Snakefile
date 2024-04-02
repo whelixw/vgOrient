@@ -76,14 +76,40 @@ rule vg_giraffe_align:
         vg="results/{ref}@{sample}_gf.vg",
         gfa="results/{ref}@{sample}_gf.gfa"
     params:
-        sample_name=lambda wc: wc.ref.replace("_circ", "")  # Adjust the sample name here
+        ref_name=lambda wc: wc.ref.replace("_circ", ""),  # Adjust the sample name here
+        sample_name=lambda wc: wc.sample.replace("_circ", "")
     shell:
         """
-        # Use {params.sample_name} to reference the corrected sample name within your shell commands
+        # Use {params.ref_name} to reference the corrected sample name within your shell commands
         vg giraffe -x {input.xg} -g {input.gbz} -m {input.min} -d {input.dist} -f data/{params.sample_name}.fq > {output.gam}
-        vg augment -i -S results/{params.sample_name}_circ.vg {output.gam} > {output.vg}
+        vg augment -i -S results/{params.ref_name}_circ.vg {output.gam} > {output.vg}
         vg convert -f {output.vg} > {output.gfa}
         """
+
+rule vg_giraffe_align_long:
+    input:
+        xg="results/{ref}@circ_gf.xg",
+        gbz="results/{ref}@circ_gf.giraffe.gbz",
+        min="results/{ref}@circ_gf.min",
+        dist="results/{ref}@circ_gf.dist",
+        query_fq="data/{sample}.fq",
+        sample_vg="results/{sample}_circ.vg",
+        reference_vg="results/{ref}_circ.vg"
+    output:
+        gam="results/{ref}@{sample}_aligned.gam",
+        vg="results/{ref}@{sample}_gfc.vg",
+        gfa="results/{ref}@{sample}_gfc.gfa"
+    params:
+        ref_name=lambda wc: wc.ref.replace("_circ", ""),  # Adjust the sample name here
+        sample_name=lambda wc: wc.sample.replace("_circ", "")
+    shell:
+        """
+        # Use {params.ref_name} to reference the corrected sample name within your shell commands
+        vg giraffe -x {input.xg} -g {input.gbz} -m {input.min} -d {input.dist} -f data/{params.sample_name}.fq > {output.gam} --align-from-chains
+        vg augment -i -S results/{params.ref_name}_circ.vg {output.gam} > {output.vg}
+        vg convert -f {output.vg} > {output.gfa}
+        """
+
  
 rule spoof_fq:
     input:
@@ -93,4 +119,14 @@ rule spoof_fq:
     shell:
         """
 	seqtk seq -F 'I' {input.fna} > {output.fq}
+        """
+
+rule smoothix:
+    input:
+        gfa="results/{sample}.gfa"
+    output:
+        gfa="results/{sample}_sm.gfa"
+    shell:
+        """
+        smoothxg -g {input.gfa} -o {output.gfa}
         """
