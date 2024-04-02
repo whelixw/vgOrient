@@ -66,9 +66,17 @@ for node in final_nodes:
     handle = graph.get_handle(node)
     node_length_dict[node] = graph.get_length(handle)
 
+
+
+
 # Only print nodes with the maximum length
 max_length = max(node_length_dict.values())
-print("Nodes with maximum length of", max_length, "bp: ")
-for item in node_length_dict.items():
-    if item[1] == max_length:
-        print(item[0])
+print("Nodes with maximum length of", max_length, "bp saved to", base_path / f"{base_name}_cutoff_nodes.txt")
+#open the file to write the results
+with open(base_path / f"{base_name}_cutoff_nodes.txt", "w") as out_file:
+    for item in node_length_dict.items():
+        if item[1] == max_length:
+            #print(item[0])
+            out_file.write(f"{item[0]}\n")
+    
+

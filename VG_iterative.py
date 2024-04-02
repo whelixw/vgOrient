@@ -178,15 +178,15 @@ for i in range(1, nr):
 #shutil.move(f"{tmp_dir}/graph_circ.vg", f"{output_dir_name}/{output_graph_name}.vg")
 #shutil.move(os.path.join(tmp_dir, "graph_circ.vg"), os.path.join(output_dir_name, f"{output_graph_name}.vg"))
 #shutil.move(Path(tmp_dir).joinpath("graph_circ.vg"), output_dir.joinpath(f"{output_graph_name}.vg"))
-out_file = f"{output_graph_name}_{graph_name}.vg"
-move_and_rename_vg_file(Path(tmp_dir).joinpath("graph_circ.vg"), output_dir, out_file)
+out_file = f"{output_graph_name}_{graph_name}"
+move_and_rename_vg_file(Path(tmp_dir).joinpath("graph_circ.vg"), output_dir, out_file + ".vg")
 # Change to the new directory
 os.chdir(output_dir_name)
 
 # Convert the file to ODGI and GFA formats
-subprocess.run(f"vg_1.44.0 convert -o {out_file} > {output_graph_name}.odgi", shell=True)
+subprocess.run(f"vg_1.44.0 convert -o {out_file}.vg > {out_file}.odgi", shell=True)
 
-subprocess.run(f"vg convert -f {out_file} > {output_graph_name}.gfa", shell=True)
+subprocess.run(f"vg convert -f {out_file}.vg > {out_file}.gfa", shell=True)
 
 # Remove the temporary directory
 os.system(f"rm -rf {tmp_dir}")
