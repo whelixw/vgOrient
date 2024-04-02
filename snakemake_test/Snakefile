@@ -6,7 +6,7 @@ rule fna_to_circ_vg:
     shell:
         """
         vg construct -r {input} > {wildcards.sample}_circ.vg
-        vg circularize {wildcards.sample}_circ.vg > {output}
+        vg circularize -p {wildcards.sample} {wildcards.sample}_circ.vg > {output}
         """
 
 rule vg_make_reference_map:
@@ -41,7 +41,7 @@ rule vg_map_query:
     shell:
         """
         tail -n +2 {input.query_fasta} | tr -d '\n' > {params.query_str} 2>> {log}
-        vg map -s $(cat {params.query_str}) -x {input.ref_xg} -g {input.ref_gcsa} > {params.map_gam} 2>> {log}
+        vg map -s $(cat {params.query_str}) -V {wildcards.query} -x {input.ref_xg} -g {input.ref_gcsa} > {params.map_gam} 2>> {log}
         vg augment -i -S {input.ref_vg} {params.map_gam} > {params.aug_vg} 2>> {log}
         vg convert -f {params.aug_vg} > {output.gfa} 2>> {log}
         """
