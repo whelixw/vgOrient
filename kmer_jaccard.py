@@ -2,6 +2,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from itertools import combinations
 import numpy as np
+import argparse
 
 
 def generate_kmers(seq, k):
@@ -66,30 +67,8 @@ def average_jaccard(debug, forward_kmers1, reverse_kmers1, forward_kmers2, rever
             print("cis and trans Jaccard distances are not equal:", jaccard_cis, jaccard_trans)
     return (jaccard_cis + jaccard_trans) / 2
 
-# Example of loading sequences and calculating pairwise Jaccard distances
-fasta_files = ['DQ409327.1.fna', 'MW534270.1.fna', 'NC_026992.1.fna', 'NC_023541.1.fna', 'NC_024860.1.fna']
-k = 21  # Example k-mer size
-kmers_per_sequence = {}
 
-# Generate k-mers for each sequence
-for fasta_file in fasta_files:
-    for record in SeqIO.parse(fasta_file, "fasta"):
-        kmers_per_sequence[record.id] = generate_kmers(str(record.seq), k)
 
-# Calculate pairwise Jaccard distances
-sequence_ids = list(kmers_per_sequence.keys())
-distances = np.zeros((len(sequence_ids), len(sequence_ids)))
-for i, j in combinations(range(len(sequence_ids)), 2):
-    # Unpack the tuples of forward and reverse k-mers for each sequence
-    forward_kmers_i, reverse_kmers_i = kmers_per_sequence[sequence_ids[i]]
-    forward_kmers_j, reverse_kmers_j = kmers_per_sequence[sequence_ids[j]]
-    # Calculate the average Jaccard distance
-    dist = average_jaccard(False, forward_kmers_i, reverse_kmers_i, forward_kmers_j, reverse_kmers_j)
-    distances[i, j] = distances[j, i] = dist
-
-# distances now contains the pairwise distances between your sequences
-
-print ("Distances:", distances)
 
 
 def calculate_distance_vector_and_min_index(distances, cluster_indices):
@@ -144,33 +123,9 @@ def find_closest_sequences(distances):
     return min_index
 
 
-# Example usage
-'''distances = np.array([
-    [0.0, 0.4, 0.6],
-    [0.4, 0.0, 0.7],
-    [0.6, 0.7, 0.0]
-])'''
 
-# Initially, no indices are in the cluster
-cluster_indices = []
 
-'''# Find the two closest sequences
-i, j = find_closest_sequences(distances)
 
-print(find_closest_sequences(distances = np.array([
-    [0.0, 0.8, 0.6],
-    [0.8, 0.0, 0.7],
-    [0.6, 0.7, 0.0]
-])))
-
-# Update the cluster indices based on the closest sequences found
-cluster_indices.extend([i, j])
-
-# Calculate the distance vector for the next iteration
-
-distance_vector, min_index = calculate_distance_vector_and_min_index(distances, cluster_indices)
-print("Distance Vector:", distance_vector)
-print("Index of Minimum Value:", min_index)'''
 
 
 def iterative_clustering(distances):
@@ -204,15 +159,73 @@ def iterative_clustering(distances):
 
     return clustering_order
 
-# Example usage with your distances matrix
-'''distances = np.array([
-    [0.0, 0.4, 0.6, 0.2],
-    [0.4, 0.0, 0.7, 0.5],
-    [0.6, 0.7, 0.0, 0.8],
-    [0.2, 0.5, 0.8, 0.0]
-])'''
+if __name__ == "__main__":
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Cluster sequences based on Jaccard distance of k-mers.')
+    parser.add_argument('fasta_files', nargs='+', help='Input FASTA files')
+    parser.add_argument('-k', '--kmer_size', type=int, default=11, help='K-mer size (default: 11)')
+    args = parser.parse_args()
 
-clustering_order = iterative_clustering(distances)
-print("Clustering Order:", clustering_order)
-#print the names of the sequences in the order they were clustered
-print("Sequence names in clustering order:", [sequence_ids[i] for i in clustering_order])
+    # Store the k-mer size and input files
+    k = args.kmer_size
+    fasta_files = args.fasta_files
+    kmers_per_sequence = {}
+
+    # Generate k-mers for each sequence
+    for fasta_file in fasta_files:
+        for record in SeqIO.parse(fasta_file, "fasta"):
+            kmers_per_sequence[record.id] = generate_kmers(str(record.seq), k)
+
+    # Your existing code for calculating distances and clustering
+    # Replace the hardcoded fasta_files and k values with the parsed arguments
+    sequence_ids = list(kmers_per_sequence.keys())
+    distances = np.zeros((len(sequence_ids), len(sequence_ids)))
+    for i, j in combinations(range(len(sequence_ids)), 2):
+        # Unpack the tuples of forward and reverse k-mers for each sequence
+        forward_kmers_i, reverse_kmers_i = kmers_per_sequence[sequence_ids[i]]
+        forward_kmers_j, reverse_kmers_j = kmers_per_sequence[sequence_ids[j]]
+        # Calculate the average Jaccard distance
+        dist = average_jaccard(False, forward_kmers_i, reverse_kmers_i, forward_kmers_j, reverse_kmers_j)
+        distances[i, j] = distances[j, i] = dist
+
+    cluster_indices = []
+
+    clustering_order = iterative_clustering(distances)
+
+    # Print the names of the sequences in the order they were clustered
+    for i in clustering_order:
+        print(fasta_files[i])
+else:
+    # Example of loading sequences and calculating pairwise Jaccard distances
+    fasta_files = ['DQ409327.1.fna', 'MW534270.1.fna', 'NC_026992.1.fna', 'NC_023541.1.fna', 'NC_024860.1.fna']
+    k = 21  # Example k-mer size
+    kmers_per_sequence = {}
+
+    # Generate k-mers for each sequence
+    for fasta_file in fasta_files:
+        for record in SeqIO.parse(fasta_file, "fasta"):
+            kmers_per_sequence[record.id] = generate_kmers(str(record.seq), k)
+
+    # Calculate pairwise Jaccard distances
+    sequence_ids = list(kmers_per_sequence.keys())
+    distances = np.zeros((len(sequence_ids), len(sequence_ids)))
+    for i, j in combinations(range(len(sequence_ids)), 2):
+        # Unpack the tuples of forward and reverse k-mers for each sequence
+        forward_kmers_i, reverse_kmers_i = kmers_per_sequence[sequence_ids[i]]
+        forward_kmers_j, reverse_kmers_j = kmers_per_sequence[sequence_ids[j]]
+        # Calculate the average Jaccard distance
+        dist = average_jaccard(False, forward_kmers_i, reverse_kmers_i, forward_kmers_j, reverse_kmers_j)
+        distances[i, j] = distances[j, i] = dist
+
+    # distances now contains the pairwise distances between your sequences
+
+    print ("Distances:", distances)
+
+    # Initially, no indices are in the cluster
+    cluster_indices = []
+
+    clustering_order = iterative_clustering(distances)
+    print("Clustering Order:", clustering_order)
+    #print the names of the sequences in the order they were clustered
+    print("Sequence names in clustering order:", [sequence_ids[i] for i in clustering_order])
+
