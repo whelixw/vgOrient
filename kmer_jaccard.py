@@ -199,15 +199,15 @@ if __name__ == "__main__":
 
     # Print the names of the sequences in the order they were clustered
     for i in clustering_order:
-<<<<<<< HEAD
+
         #print absolute path of the fasta file
         print(Path(fasta_files[i]).resolve())
         #print(os.path.abspath(fasta_files[i]))
 
         #print(fasta_files[i])
-=======
-        print(fasta_files[i])
->>>>>>> b8aa208ce200a1fb02a523ba506d98361468063f
+
+
+
 else:
     # Example of loading sequences and calculating pairwise Jaccard distances
     fasta_files = ['DQ409327.1.fna', 'MW534270.1.fna', 'NC_026992.1.fna', 'NC_023541.1.fna', 'NC_024860.1.fna']
