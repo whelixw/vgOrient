@@ -22,34 +22,19 @@ def calculate_jaccard_distances(forward_kmers1, reverse_kmers1, forward_kmers2, 
     jaccard_trans = calculate_jaccard_distance(forward_kmers1, reverse_kmers2)
     return jaccard_cis, jaccard_trans
 
-def adjust_orientations(sequence_ids, kmers_per_sequence, cis_distances, trans_distances):
-    orientations = {seq_id: 'original' for seq_id in sequence_ids}  # All sequences start in the original orientation
-    improved = True
-
-    while improved:
-        improved = False
-        for i in range(len(sequence_ids)):
-            current_orientation = orientations[sequence_ids[i]]
-            # Calculate current total distance with the current orientation
-            current_total_distance = np.sum(cis_distances[i] if current_orientation == 'original' else trans_distances[i])
-            
-            # Calculate potential total distance with the flipped orientation
-            potential_total_distance = np.sum(trans_distances[i] if current_orientation == 'original' else cis_distances[i])
-            
-            # Decide to flip if it reduces the total distance
-            if potential_total_distance < current_total_distance:
-                print(potential_total_distance)
-                print(current_total_distance)
-                print(cis_distances[i])
-                print(trans_distances[i])
-                orientations[sequence_ids[i]] = 'reverse' if current_orientation == 'original' else 'original'
-                improved = True
-                # Recalculate the cis and trans distances for this sequence against all others
-
-    return orientations
+def flip_sequence(seq_index, orientations, cis_distances, trans_distances, current_distances):
+    orientations[seq_index] = not orientations[seq_index]  # Flip the orientation
+    for i in range(len(orientations)):
+        if i != seq_index:
+            if orientations[seq_index]:
+                # If we're flipping to reverse, take the trans distance and put it in the current_distances
+                current_distances[seq_index][i] = current_distances[i][seq_index] = trans_distances[seq_index][i] #double assignment skips lookup
+            else:
+                # If we're flipping back to original, take the cis distance and put it in the current_distances
+                current_distances[seq_index][i] = current_distances[i][seq_index] = cis_distances[seq_index][i]
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Cluster sequences based on Jaccard distance of k-mers.')
+    parser = argparse.ArgumentParser(description='Determine sequence orientations based on Jaccard distances.')
     parser.add_argument('fasta_files', nargs='+', help='Input FASTA files')
     parser.add_argument('-k', '--kmer_size', type=int, default=11, help='K-mer size (default: 11)')
     args = parser.parse_args()
@@ -65,6 +50,8 @@ if __name__ == "__main__":
     sequence_ids = list(kmers_per_sequence.keys())
     cis_distances = np.zeros((len(sequence_ids), len(sequence_ids)))
     trans_distances = np.zeros((len(sequence_ids), len(sequence_ids)))
+    current_distances = np.zeros((len(sequence_ids), len(sequence_ids)))
+    orientations = [False] * len(sequence_ids)  # Start with all sequences in original orientation
 
     for i, j in combinations(range(len(sequence_ids)), 2):
         forward_kmers_i, reverse_kmers_i = kmers_per_sequence[sequence_ids[i]]
@@ -72,7 +59,23 @@ if __name__ == "__main__":
         cis_dist, trans_dist = calculate_jaccard_distances(forward_kmers_i, reverse_kmers_i, forward_kmers_j, reverse_kmers_j)
         cis_distances[i, j] = cis_distances[j, i] = cis_dist
         trans_distances[i, j] = trans_distances[j, i] = trans_dist
+        current_distances[i, j] = current_distances[j, i] = cis_dist  # Initially same as cis distances
 
-    # Adjust orientations based on the Jaccard distances
-    final_orientations = adjust_orientations(sequence_ids, kmers_per_sequence, cis_distances, trans_distances)
-    print("Final Orientations:", final_orientations)
+    # Greedy algorithm for sequence orientation
+    improved = True
+    while improved:
+        improved = False
+        for seq_index in range(len(sequence_ids)):
+            current_total_distance = sum(current_distances[seq_index])
+            flip_sequence(seq_index, orientations, cis_distances, trans_distances, current_distances)
+            new_total_distance = sum(current_distances[seq_index])
+
+            if new_total_distance >= current_total_distance:
+                # Flip back since there's no improvement
+                flip_sequence(seq_index, orientations, cis_distances, trans_distances, current_distances)
+            else:
+                improved = True
+
+    # Output the orientations
+    for seq_id, orientation in zip(sequence_ids, orientations):
+        print(f"{seq_id}: {'Reverse' if orientation else 'Original'}")
