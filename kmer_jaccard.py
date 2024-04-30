@@ -73,25 +73,42 @@ def order_files_by_distance(sequence_ids, orientations, cis_distances, trans_dis
                     effective_distances[i] += trans_distances[i, j]
     ordered_indices = np.argsort(effective_distances)
     return [sequence_ids[i] for i in ordered_indices]
-def check_and_flip_orientations(sequence_ids, cis_distances, trans_distances):
-    orientations = [False] * len(sequence_ids)  # False indicates original orientation
-    improved = True
-    while improved:
-        improved = False
-        for seq_index in range(len(sequence_ids)):
-            # Calculate current total distance based on the current orientation
-            current_total_distance = sum(cis_distances[seq_index] if orientations[seq_index] else trans_distances[seq_index])
-            # Calculate potential total distance if the orientation were flipped
-            potential_total_distance = sum(trans_distances[seq_index] if orientations[seq_index] else cis_distances[seq_index])
-            
-            print(f"Checking sequence {sequence_ids[seq_index]}: current orientation {'reverse' if orientations[seq_index] else 'original'}, current total distance {current_total_distance}, potential new total distance {potential_total_distance}")
 
-            # Flip if the new orientation offers a lower total distance
-            if potential_total_distance < current_total_distance:
-                orientations[seq_index] = not orientations[seq_index]
-                improved = True
-                print(f"Flipping orientation of {sequence_ids[seq_index]}")
+
+def check_and_flip_orientations(sequence_ids, cis_distances, trans_distances):
+    # Initial orientation: False indicates original orientation
+    orientations = [False] * len(sequence_ids)
+    proposed_flips = [False] * len(sequence_ids)  # Track proposed flips based on potential improvements
+
+    # First, determine flips based on individual potential improvements
+    for seq_index in range(len(sequence_ids)):
+        current_total_distance = sum(cis_distances[seq_index] if orientations[seq_index] else trans_distances[seq_index])
+        potential_total_distance = sum(trans_distances[seq_index] if orientations[seq_index] else cis_distances[seq_index])
+
+        if potential_total_distance < current_total_distance:
+            proposed_flips[seq_index] = True  # Mark for flipping based on individual checks
+
+    # Count proposed flips to decide on the global strategy
+    num_flips_proposed = sum(proposed_flips)
+    num_no_flips = len(sequence_ids) - num_flips_proposed
+
+    # If the number of proposed flips is less than those not flipped, flip those proposed
+    # Otherwise, flip the others to minimize total reversals
+    if num_flips_proposed < num_no_flips:
+        # Apply flips only to those marked for flipping based on individual checks
+        for i in range(len(orientations)):
+            if proposed_flips[i]:
+                orientations[i] = not orientations[i]  # Apply the flip
+                print(f"Flipping orientation of {sequence_ids[i]} due to individual Jaccard improvement")
+    else:
+        # Flip all sequences not marked for flipping
+        for i in range(len(orientations)):
+            if not proposed_flips[i]:
+                orientations[i] = not orientations[i]  # Apply the flip
+                print(f"Flipping orientation of {sequence_ids[i]} to minimize total reversals")
+
     return orientations
+
 
 
 if __name__ == "__main__":
