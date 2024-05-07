@@ -9,6 +9,7 @@ def main():
     parser.add_argument('--output', '-o', default='output.txt', help='Output file name for kmer_jaccard.py')
     parser.add_argument('--vg_output_dir', help='Output directory for VG_diterative.py')
     parser.add_argument('--kmer_size', '-k', default='11', help='kmer size for computing jaccard similarity')
+    parser.add_argument('--orientation', action='store_true', help='Use specific orientation in kmer_jaccard.py')
     parser.add_argument('--log', help='Log file to record execution details and timings')
 
     args = parser.parse_args()
@@ -20,14 +21,17 @@ def main():
 
     # Running kmer_jaccard.py
     start_time = time.time()
+    kmer_cmd = ['python3', 'kmer_jaccard.py']
     if args.kmer_size:
-        kmer_cmd = ['python3', 'kmer_jaccard.py', '-k', args.kmer_size] + args.input_files
-    else:
-        kmer_cmd = ['python3', 'kmer_jaccard.py'] + args.input_files
-    with open(args.output, 'w') as f:
-        subprocess.run(kmer_cmd, stdout=f)
+        kmer_cmd.extend(['-k', args.kmer_size])
+    if args.orientation:
+        kmer_cmd.append('--orientation')
+    kmer_cmd.extend(args.input_files)
+    
+    # Execute without redirecting stdout directly to file
+    subprocess.run(kmer_cmd)
     kmer_duration = time.time() - start_time
-    print(f"kmer_jaccard.py output saved to {args.output}")
+    print(f"kmer_jaccard.py execution completed.")
     if args.log:
         logging.info(f'kmer_jaccard.py completed in {kmer_duration:.2f} seconds')
 

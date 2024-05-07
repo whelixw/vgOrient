@@ -166,7 +166,8 @@ if __name__ == "__main__":
         ordered_sequence_ids = order_files_by_distance(sequence_ids, orientations, cis_distances, trans_distances)
         for seq_id in ordered_sequence_ids:
             fasta_path = reversed_files[seq_id]
-            output_file.write(f"{fasta_path}\n")
+            absolute_path = Path(fasta_path).absolute()  # Converts to absolute path
+            output_file.write(f"{absolute_path}\n")
     
     print("Process completed. Check 'kmer_output.txt' for the ordered FASTA file paths.")
 

@@ -5,6 +5,7 @@ import tempfile
 import subprocess
 from datetime import datetime
 from pathlib import Path
+import shutil
 
 def setup_temporary_directory(prefix='vg-'):
     """Create and return a temporary directory."""
@@ -95,10 +96,17 @@ def main():
 
     # Convert final VG to GFA
     final_gfa_path = output_dir / f"{base_name}_graph.gfa"
+    final_odgi_path = output_dir / f"{base_name}_graph.odgi"
     subprocess_command(["vg", "convert", "-f", str(graph_circ)], output_file=final_gfa_path)
+    subprocess_command(["vg_1.44.0", "convert", "-o", str(graph_circ)], output_file=final_odgi_path)
 
     print(f"Graph processing completed at {datetime.now()}")
     print(f"All output files are saved in {output_dir}")
+    
+    new_dir_name = "intermediate"
+    new_path = os.path.join(output_dir, new_dir_name)
+    shutil.move(tmp_dir, new_path)
+    print(f"Temporary files are saved in {new_path}")
 
 if __name__ == "__main__":
     main()
