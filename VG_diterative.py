@@ -73,7 +73,7 @@ def main():
     graph_circ = Path(f"{base_name}_graph_circ.vg")
 
     initial_output = tmp_dir / f"{base_name}_initial_output.vg"
-    subprocess_command(["vg", "construct", "-r", initial_fasta], output_file=initial_output)
+    subprocess_command(["vg", "construct", "-r", initial_fasta, "-m", "1024"], output_file=initial_output)
     circular_output = tmp_dir / f"{base_name}_circularized.vg"
     subprocess_command(["vg", "circularize", "-p", base_name, str(initial_output)], output_file=circular_output)
     os.replace(circular_output, graph_circ)  # Replace the original graph with the circularized version
