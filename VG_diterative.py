@@ -73,7 +73,7 @@ def main():
     graph_circ = Path(f"{base_name}_graph_circ.vg")
 
     initial_output = tmp_dir / f"{base_name}_initial_output.vg"
-    subprocess_command(["vg", "construct", "-r", initial_fasta, "-m", "1024"], output_file=initial_output)
+    subprocess_command(["vg", "construct", "-r", initial_fasta, "-m", "32"], output_file=initial_output)
     circular_output = tmp_dir / f"{base_name}_circularized.vg"
     subprocess_command(["vg", "circularize", "-p", base_name, str(initial_output)], output_file=circular_output)
     os.replace(circular_output, graph_circ)  # Replace the original graph with the circularized version
@@ -91,7 +91,8 @@ def main():
         file_base_name = os.path.splitext(os.path.basename(fasta_file))[0]
         sequence_str = read_sequence_data(fasta_file)
         gam_file = Path('alignments') / f"{file_base_name}.gam"
-        subprocess_command(["vg", "map", "-s", sequence_str, "-V", file_base_name, "-g", str(graph_circ.with_suffix(".gcsa")), "-x", str(graph_circ.with_suffix(".xg"))], output_file=gam_file)
+        #print("-w"+str(int(len(sequence_str)/10)))
+        subprocess_command(["vg", "map", "-s", sequence_str, "-V", file_base_name, "-g", str(graph_circ.with_suffix(".gcsa")), "-x", str(graph_circ.with_suffix(".xg")), "-w"+str(int(len(sequence_str)/22))], output_file=gam_file)
         augment_graph(tmp_dir, graph_circ, gam_file)
 
     # Convert final VG to GFA
