@@ -10,6 +10,9 @@ def main():
     parser.add_argument('--vg_output_dir', help='Output directory for VG_diterative.py')
     parser.add_argument('--kmer_size', '-k', default='11', help='kmer size for computing jaccard similarity')
     parser.add_argument('--orientation', action='store_true', help='Use specific orientation in kmer_jaccard.py')
+    parser.add_argument('--band_width', '-w', type=int, default=512, help='Band width for VG mapping.')
+    parser.add_argument('--min_match_length', '-m', type=int, default=512, help='Minimum match length for VG mapping.')
+    parser.add_argument('--append_wm', action='store_true', default=True, help='Append w and m values to the output directory name.')
     parser.add_argument('--log', help='Log file to record execution details and timings')
 
     args = parser.parse_args()
@@ -28,7 +31,6 @@ def main():
         kmer_cmd.append('--orientation')
     kmer_cmd.extend(args.input_files)
     
-    # Execute without redirecting stdout directly to file
     subprocess.run(kmer_cmd)
     kmer_duration = time.time() - start_time
     print(f"kmer_jaccard.py execution completed.")
@@ -37,7 +39,9 @@ def main():
 
     # Running VG_diterative.py
     start_time = time.time()
-    vg_cmd = ['python3', 'VG_diterative.py', '-o', args.vg_output_dir, args.output] if args.vg_output_dir else ['python3', 'VG_diterative.py', args.output]
+    vg_cmd = ['python3', 'VG_diterative.py', '-o', args.vg_output_dir, args.output, '-w', str(args.band_width), '-m', str(args.min_match_length)]
+    if args.append_wm:
+        vg_cmd.append('--append_wm')
     subprocess.run(vg_cmd)
     vg_duration = time.time() - start_time
     print("VG_diterative.py has been executed")

@@ -13,9 +13,12 @@ def setup_temporary_directory(prefix='vg-'):
     print(f"Temporary directory: {tmp_dir}")
     return Path(tmp_dir)
 
-def prepare_output_directory(base_name, specified_output_dir=None):
+def prepare_output_directory(base_name, w, m, append_wm=True, specified_output_dir=None):
     """Prepare the output directory based on the base name and optional specified directory."""
-    output_dir = Path(specified_output_dir if specified_output_dir else f"{base_name}_output").resolve()
+    print(base_name, w, m, append_wm, specified_output_dir)
+    if append_wm:
+        specified_output_dir = f"{specified_output_dir}_w{w}_m{m}"
+    output_dir = Path(specified_output_dir if specified_output_dir else f"{dir_name}_output").resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
 
@@ -52,10 +55,13 @@ def main():
     parser = argparse.ArgumentParser(description='Script to process a list of FASTA files and generate output graphs.')
     parser.add_argument('fasta_list', help='Text file containing the list of FASTA files to process.')
     parser.add_argument('-o', '--output_dir_name', help='The name of the output directory.', default='output_graphs')
+    parser.add_argument('-w', '--band_width', type=int, default=512, help='Band width for mapping.')
+    parser.add_argument('-m', '--min_match_length', type=int, default=512, help='Minimum match length.')
+    parser.add_argument('--append_wm', action='store_true', default=True, help='Append w and m values to the output directory name.')
 
     args = parser.parse_args()
     fasta_list_filename = args.fasta_list
-    output_dir = prepare_output_directory(Path.cwd(), args.output_dir_name)
+    output_dir = prepare_output_directory(Path.cwd(), args.band_width, args.min_match_length, args.append_wm, args.output_dir_name)
 
     with open(fasta_list_filename, 'r') as file:
         fasta_files = [line.strip() for line in file.readlines() if line.strip()]
@@ -73,7 +79,7 @@ def main():
     graph_circ = Path(f"{base_name}_graph_circ.vg")
 
     initial_output = tmp_dir / f"{base_name}_initial_output.vg"
-    subprocess_command(["vg", "construct", "-r", initial_fasta, "-m", "32"], output_file=initial_output)
+    subprocess_command(["vg", "construct", "-r", initial_fasta, "-m", str(args.min_match_length)], output_file=initial_output)
     circular_output = tmp_dir / f"{base_name}_circularized.vg"
     subprocess_command(["vg", "circularize", "-p", base_name, str(initial_output)], output_file=circular_output)
     os.replace(circular_output, graph_circ)  # Replace the original graph with the circularized version
@@ -82,7 +88,6 @@ def main():
     subprocess_command(["vg", "stats", "-z", str(graph_circ)])
     subprocess_command(["vg", "index", "-x", str(graph_circ.with_suffix(".xg")), str(graph_circ)])
 
-    
     subprocess_command(["vg", "prune", "-k", "48", str(graph_circ)], output_file=str(graph_circ) + "_pruned.vg")
     subprocess_command(["vg", "index", "-g", str(graph_circ.with_suffix(".gcsa")), "-Z", "400", str(graph_circ) + "_pruned.vg"])
 
@@ -91,8 +96,7 @@ def main():
         file_base_name = os.path.splitext(os.path.basename(fasta_file))[0]
         sequence_str = read_sequence_data(fasta_file)
         gam_file = Path('alignments') / f"{file_base_name}.gam"
-        #print("-w"+str(int(len(sequence_str)/10)))
-        subprocess_command(["vg", "map", "-s", sequence_str, "-V", file_base_name, "-g", str(graph_circ.with_suffix(".gcsa")), "-x", str(graph_circ.with_suffix(".xg")), "-w"+str(int(len(sequence_str)/22))], output_file=gam_file)
+        subprocess_command(["vg", "map", "-s", sequence_str, "-V", file_base_name, "-g", str(graph_circ.with_suffix(".gcsa")), "-x", str(graph_circ.with_suffix(".xg")), "-w", str(args.band_width)], output_file=gam_file)
         augment_graph(tmp_dir, graph_circ, gam_file)
 
     # Convert final VG to GFA
@@ -111,4 +115,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
