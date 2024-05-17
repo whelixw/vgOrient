@@ -16,11 +16,25 @@ def setup_temporary_directory(prefix='vg-'):
 def prepare_output_directory(base_name, w, m, append_wm=True, specified_output_dir=None):
     """Prepare the output directory based on the base name and optional specified directory."""
     print(base_name, w, m, append_wm, specified_output_dir)
-    if append_wm:
-        specified_output_dir = f"{specified_output_dir}_w{w}_m{m}"
+#    if append_wm:
+#        specified_output_dir = f"{specified_output_dir}_w{w}_m{m}"
     output_dir = Path(specified_output_dir if specified_output_dir else f"{dir_name}_output").resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
+
+
+
+def move_directory(src, dest):
+    src = str(src)
+    dest = str(dest)
+    if os.path.exists(dest):
+        # If the destination exists and is not empty, handle it appropriately:
+        # For example, remove it first (if you want to replace it), merge contents, etc.
+        # Here, we just print a message, but you might want to add actual handling logic.
+        print(f"Destination {dest} already exists. Handling existing directory.")
+        # shutil.rmtree(dest)  # Uncomment to remove the existing directory (be cautious)
+    # Now perform the move
+    shutil.move(src, dest)
 
 def subprocess_command(cmd, output_file=None):
     """Run a subprocess command with optional output redirection."""
@@ -57,7 +71,7 @@ def main():
     parser.add_argument('-o', '--output_dir_name', help='The name of the output directory.', default='output_graphs')
     parser.add_argument('-w', '--band_width', type=int, default=512, help='Band width for mapping.')
     parser.add_argument('-m', '--min_match_length', type=int, default=512, help='Minimum match length.')
-    parser.add_argument('--append_wm', action='store_true', default=True, help='Append w and m values to the output directory name.')
+    parser.add_argument('--append_wm', action='store_true', default=False, help='Append w and m values to the output directory name.')
 
     args = parser.parse_args()
     fasta_list_filename = args.fasta_list
@@ -110,7 +124,7 @@ def main():
     
     new_dir_name = "intermediate"
     new_path = os.path.join(output_dir, new_dir_name)
-    shutil.move(tmp_dir, new_path)
+    move_directory(tmp_dir, new_path)
     print(f"Temporary files are saved in {new_path}")
 
 if __name__ == "__main__":
