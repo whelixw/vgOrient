@@ -115,7 +115,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Cluster sequences based on Jaccard distance of k-mers and optionally adjust orientations.')
     parser.add_argument('fasta_files', nargs='+', help='Input FASTA files')
     parser.add_argument('-k', '--kmer_size', type=int, default=11, help='K-mer size (default: 11)')
-    parser.add_argument('-o', '--orientation', action='store_true', help='Optimize sequence orientations based on Jaccard distances')
+    parser.add_argument('-mcj', '--min_jaccard_init', action='store_true', help='Select initial sequence based on minimum cumulative Jaccard distance')
+    parser.add_argument('-o', '--output_file', type=str, default='kmer_output.txt', help='Output file path (default: "kmer_output.txt")')
+    parser.add_argument('-or','--orientation', action='store_true', help='Optimize sequence orientations based on Jaccard distances')
     args = parser.parse_args()
 
     k = args.kmer_size
@@ -161,13 +163,28 @@ if __name__ == "__main__":
         orientations = [False] * len(sequence_ids)  # All sequences remain in original orientation
         reversed_files = {seq_id: get_fasta_file_for_seq_id(fasta_files, seq_id) for seq_id in sequence_ids}
     
-    # Output to kmer_output.txt
-    with open("kmer_output.txt", "w") as output_file:
-        ordered_sequence_ids = order_files_by_distance(sequence_ids, orientations, cis_distances, trans_distances)
-        for seq_id in ordered_sequence_ids:
-            fasta_path = reversed_files[seq_id]
-            absolute_path = Path(fasta_path).absolute()  # Converts to absolute path
-            output_file.write(f"{absolute_path}\n")
-    
+    # Decide the initial sequence based on cumulative Jaccard distances if the relevant argument is provided
+if args.min_jaccard_init:
+    total_jaccard_distances = np.sum(cis_distances, axis=1) + np.sum(trans_distances, axis=1)
+    starting_index = np.argmin(total_jaccard_distances)
+    ordered_sequence_ids = [sequence_ids[starting_index]]
+    remaining_indices = list(range(len(sequence_ids)))
+    remaining_indices.remove(starting_index)
+
+    while remaining_indices:
+        last_index = sequence_ids.index(ordered_sequence_ids[-1])  # This gets the integer index of the last ordered ID
+        next_index = min(remaining_indices, key=lambda x: cis_distances[last_index, x] if orientations[x] == orientations[last_index] else trans_distances[last_index, x])
+        ordered_sequence_ids.append(sequence_ids[next_index])
+        remaining_indices.remove(next_index)       
+else:
+    ordered_sequence_ids = order_files_by_distance(sequence_ids, orientations, cis_distances, trans_distances)
+
+# Use the specified output file name for writing results
+output_file_path = args.output_file
+with open(output_file_path, "w") as output_file:
+    for seq_id in ordered_sequence_ids:
+        fasta_path = reversed_files[seq_id]
+        absolute_path = Path(fasta_path).absolute()  # Converts to absolute path
+        output_file.write(f"{absolute_path}\n")
     print("Process completed. Check 'kmer_output.txt' for the ordered FASTA file paths.")
 

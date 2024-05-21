@@ -19,6 +19,7 @@ def main():
     parser.add_argument('--min_match_length', '-m', type=int, default=512, help='Minimum match length for VG mapping.')
     parser.add_argument('--append_wm', action='store_true', default=True, help='Append w and m values to the output directory name.')
     parser.add_argument('--log', help='Log file name for recording execution details and timings.', default='vg_wrapper.log')
+    parser.add_argument('--min_jaccard_init', '-mcj', action='store_true', help='Order sequences by lowest sum of j-dist')
 
     args = parser.parse_args()
 
@@ -46,6 +47,10 @@ def main():
         kmer_cmd.extend(['-k', args.kmer_size])
     if args.orientation:
         kmer_cmd.append('--orientation')
+    if args.output:
+        kmer_cmd.extend(['-o', args.output])
+    if args.min_jaccard_init:
+        kmer_cmd.extend(['--min_jaccard_init'])
     kmer_cmd.extend(args.input_files)
     
     subprocess.run(kmer_cmd)
