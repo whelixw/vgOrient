@@ -3,6 +3,7 @@ import argparse
 import time
 import logging
 import os
+import glob
 
 def setup_logging(log_file, log_level=logging.INFO):
     """Set up the logging configuration."""
@@ -67,6 +68,20 @@ def main():
     vg_duration = time.time() - start_time
     print("VG_diterative.py has been executed")
     logging.info(f'VG_diterative.py completed in {vg_duration:.2f} seconds')
+
+    fasta_output_dir = os.path.join(output_dir, "rotated_fastas")
+    os.makedirs(fasta_output_dir, exist_ok=True)
+
+    gfa_files = glob.glob(os.path.join(output_dir, '*.gfa'))
+    if not gfa_files:
+        logging.error("No GFA files found.")
+        return
+
+    rotation_cmd = ['python3', 'cut_and_rot.py', gfa_files[0], fasta_output_dir] + args.input_files
+    subprocess.run(rotation_cmd)
+    
+    print(f"Rotation of FASTA files has been executed")
+    logging.info("Rotation of FASTA files has been executed")
 
 if __name__ == '__main__':
     main()
