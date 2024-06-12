@@ -15,7 +15,7 @@ def main():
     parser.add_argument('--output', '-o', default='output.txt', help='Output file name for kmer_jaccard.py')
     parser.add_argument('--vg_output_dir', help='Output directory for VG_diterative.py')
     parser.add_argument('--kmer_size', '-k', default='11', help='kmer size for computing jaccard similarity')
-    parser.add_argument('--orientation', action='store_true', help='Use specific orientation in kmer_jaccard.py')
+    parser.add_argument('--orientation', action='store_true', help='Reorient inputs in kmer_jaccard.py')
     parser.add_argument('--band_width', '-w', type=int, default=512, help='Band width for VG mapping.')
     parser.add_argument('--min_match_length', '-m', type=int, default=512, help='Minimum match length for VG mapping.')
     parser.add_argument('--append_wm', action='store_true', default=True, help='Append w and m values to the output directory name.')
