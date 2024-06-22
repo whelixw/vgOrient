@@ -9,15 +9,10 @@ def random_transform_fasta(input_file, output_dir):
     """
     Randomly flips and rotates a fasta file.
     - 50% chance to reverse complement each sequence.
-    - 1/n chance to rotate the sequence by 0, 90, 180, or 270 degrees.
+    - Randomly rotates the sequence by a position between 0 and the length of the sequence.
     """
     # Read the fasta file
     records = list(SeqIO.parse(input_file, "fasta"))
-    n = len(records)
-    
-    # Determine the rotation
-    rotation_degrees = random.choice([0, 90, 180, 270])
-    rotation_index = rotation_degrees // 90
     
     # Apply the rotation and flip if necessary
     transformed_records = []
@@ -29,8 +24,8 @@ def random_transform_fasta(input_file, output_dir):
         else:
             flip_status = "original"
 
-        # Rotate sequence by cutting and rearranging
-        rotation_cut = len(new_seq) * rotation_index // 4
+        # Rotate sequence by a random cut position within its length
+        rotation_cut = random.randint(0, len(new_seq) - 1)
         new_seq = new_seq[rotation_cut:] + new_seq[:rotation_cut]
         
         # Create new record with transformed sequence
@@ -43,13 +38,12 @@ def random_transform_fasta(input_file, output_dir):
     
     # Output file path with orientation and rotation in the name
     base_name = os.path.splitext(os.path.basename(input_file))[0]
-    #output_file = f"{base_name}_{flip_status}_rot{rotation_degrees}.fasta"
     output_file = f"{base_name}.fasta"
     output_path = os.path.join(output_dir, output_file)
     
     # Write the transformed sequences to a new file
     SeqIO.write(transformed_records, output_path, "fasta")
-    print(f"Processed {input_file}: {flip_status}, rotation {rotation_degrees} degrees")
+    print(f"Processed {input_file}: {flip_status}, rotation cut at position {rotation_cut}")
 
 def process_directory(directory):
     # Ensure the output directory exists
