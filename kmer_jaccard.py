@@ -8,30 +8,17 @@ from pathlib import Path
 import os
 
 def reverse_fasta(fasta_file, record_id):
-    # Check if the file has already been reversed
-    #print("Checking file:", fasta_file)
-    if fasta_file.endswith('_reversed.fasta'):
-        #print("test")
-        # Determine the new file name by removing the "_reversed" suffix
-        new_file = fasta_file.replace('_reversed.fasta', '.fasta')
-        # Reverse the reversal (restore to original)
-        action = "Restored"
-    else:
-        # Determine the new file name by adding the "_reversed" suffix
-        new_file = fasta_file.replace('.fasta', '_reversed.fasta')
-        action = "Reversed"
-    
-    with open(fasta_file, "r") as infile, open(new_file, "w") as outfile:
-        for record in SeqIO.parse(infile, "fasta"):
+    reversed_flag = False
+    with open(fasta_file, "r+") as file:
+        records = list(SeqIO.parse(file, "fasta"))
+        for record in records:
             if record.id == record_id:
-                record.seq = record.seq.reverse_complement()  # Always reverse the sequence data
-            SeqIO.write(record, outfile, "fasta")
-    
-    # Remove the old file
-    os.remove(fasta_file)
-    
-    return new_file, action
-
+                record.seq = record.seq.reverse_complement()  # Reverse the sequence
+                reversed_flag = True
+        file.seek(0)  # Reset file pointer to the beginning
+        SeqIO.write(records, file, "fasta")
+        file.truncate()  # Remove the rest of the original content after the new end
+    return reversed_flag
 
 def get_fasta_file_for_seq_id(fasta_files, seq_id):
     # Strip off '_reversed' if present to match against the sequence ID
@@ -118,10 +105,13 @@ if __name__ == "__main__":
     parser.add_argument('-mcj', '--min_jaccard_init', action='store_true', help='Select initial sequence based on minimum cumulative Jaccard distance')
     parser.add_argument('-o', '--output_file', type=str, default='kmer_output.txt', help='Output file path (default: "kmer_output.txt")')
     parser.add_argument('-or','--orientation', action='store_true', help='Optimize sequence orientations based on Jaccard distances')
+    #parser.add_argument('--log_dir', help='Directory to save the log file indicating reversed sequences. If not provided, uses the parent directory of the first FASTA file.')
     args = parser.parse_args()
 
     k = args.kmer_size
     fasta_files = args.fasta_files
+    #log_dir = args.log_dir or str(Path(fasta_files[0]).parent)
+    #log_file_path = os.path.join(log_dir, "reversed_sequences.log")
     kmers_per_sequence = {}
 
     for fasta_file in fasta_files:
@@ -152,10 +142,10 @@ if __name__ == "__main__":
             fasta_file = get_fasta_file_for_seq_id(fasta_files, seq_id)
             if orientation:  # If the sequence needs to be reversed or restored
 
-                reversed_file, action = reverse_fasta(fasta_file, seq_id)
-                
-                reversed_files[seq_id] = reversed_file
-                print(f"{action} sequence {seq_id} saved to {reversed_file}")
+                reversed_file = reverse_fasta(fasta_file, seq_id)
+                print(f"{seq_id} reversed")
+                reversed_files[seq_id] = fasta_file
+                #print(f"{action} sequence {seq_id} saved to {reversed_file}")
             else:
                 reversed_files[seq_id] = fasta_file
 
@@ -184,6 +174,7 @@ output_file_path = args.output_file
 with open(output_file_path, "w") as output_file:
     for seq_id in ordered_sequence_ids:
         fasta_path = reversed_files[seq_id]
+        print(fasta_path)
         absolute_path = Path(fasta_path).absolute()  # Converts to absolute path
         output_file.write(f"{absolute_path}\n")
     print("Process completed. Check 'kmer_output.txt' for the ordered FASTA file paths.")
