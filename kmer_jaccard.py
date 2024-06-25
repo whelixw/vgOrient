@@ -63,39 +63,71 @@ def order_files_by_distance(sequence_ids, orientations, cis_distances, trans_dis
 
 
 def check_and_flip_orientations(sequence_ids, cis_distances, trans_distances):
-    # Initial orientation: False indicates original orientation
-    orientations = [False] * len(sequence_ids)
-    proposed_flips = [False] * len(sequence_ids)  # Track proposed flips based on potential improvements
+    orientations = [False] * len(sequence_ids)  # Start with all sequences in original orientation
+    total_improvement = True
 
-    # First, determine flips based on individual potential improvements
-    for seq_index in range(len(sequence_ids)):
-        current_total_distance = sum(cis_distances[seq_index] if orientations[seq_index] else trans_distances[seq_index])
-        potential_total_distance = sum(trans_distances[seq_index] if orientations[seq_index] else cis_distances[seq_index])
-
-        if potential_total_distance < current_total_distance:
-            proposed_flips[seq_index] = True  # Mark for flipping based on individual checks
-
-    # Count proposed flips to decide on the global strategy
-    num_flips_proposed = sum(proposed_flips)
-    num_no_flips = len(sequence_ids) - num_flips_proposed
-
-    # If the number of proposed flips is less than those not flipped, flip those proposed
-    # Otherwise, flip the others to minimize total reversals
-    if num_flips_proposed < num_no_flips:
-        # Apply flips only to those marked for flipping based on individual checks
-        for i in range(len(orientations)):
-            if proposed_flips[i]:
-                orientations[i] = not orientations[i]  # Apply the flip
-                print(f"Flipping orientation of {sequence_ids[i]} due to individual Jaccard improvement")
-    else:
-        # Flip all sequences not marked for flipping
-        for i in range(len(orientations)):
-            if not proposed_flips[i]:
-                orientations[i] = not orientations[i]  # Apply the flip
-                print(f"Flipping orientation of {sequence_ids[i]} to minimize total reversals")
+    while total_improvement:
+        total_improvement = False
+        improved_this_round = True
+        
+        while improved_this_round:
+            improved_this_round = False
+            for seq_index in range(len(sequence_ids)):
+                current_total_distance = sum(cis_distances[seq_index] if orientations[seq_index] else trans_distances[seq_index])
+                potential_total_distance = sum(trans_distances[seq_index] if orientations[seq_index] else cis_distances[seq_index])
+                
+                if potential_total_distance < current_total_distance:
+                    orientations[seq_index] = not orientations[seq_index]
+                    improved_this_round = True
+                    total_improvement = True
+                    print(f"Flipping orientation of {sequence_ids[seq_index]} to {'reverse' if orientations[seq_index] else 'original'} based on improvement in Jaccard distance")
 
     return orientations
 
+def simulated_annealing(sequence_ids, cis_distances, trans_distances, cooling_rate=0.99, initial_temp=100.0):
+    import math
+    import random
+
+    orientations = [False] * len(sequence_ids)
+    temp = initial_temp
+
+    while temp > 0.1:
+        seq_index = random.randint(0, len(sequence_ids) - 1)
+        current_total_distance = sum(cis_distances[i][j] if orientations[i] == orientations[j] else trans_distances[i][j] for i in range(len(sequence_ids)) for j in range(len(sequence_ids)) if i != j)
+        
+        # Flip orientation temporarily
+        orientations[seq_index] = not orientations[seq_index]
+        new_total_distance = sum(cis_distances[i][j] if orientations[i] == orientations[j] else trans_distances[i][j] for i in range(len(sequence_ids)) for j in range(len(sequence_ids)) if i != j)
+
+        if new_total_distance < current_total_distance or math.exp((current_total_distance - new_total_distance) / temp) > random.random():
+            # Accept the new orientation
+            print(f"Flipping orientation of {sequence_ids[seq_index]} at temperature {temp}")
+        else:
+            # Revert back if not accepting the new configuration
+            orientations[seq_index] = not orientations[seq_index]
+
+        temp *= cooling_rate
+
+    return orientations
+
+def brute_force_optimal_orientation(sequence_ids, cis_distances, trans_distances):
+    from itertools import product
+
+    num_sequences = len(sequence_ids)
+    best_score = float('inf')
+    best_orientation = None
+
+    # Iterate over all possible combinations of True (reversed) and False (original)
+    for orientations in product([True, False], repeat=num_sequences):
+        total_distance = sum(cis_distances[i][j] if orientations[i] == orientations[j] else trans_distances[i][j]
+                             for i in range(num_sequences) for j in range(num_sequences) if i != j)
+
+        if total_distance < best_score:
+            best_score = total_distance
+            best_orientation = orientations
+
+    print(f"Optimal orientation found with score {best_score}")
+    return list(best_orientation)
 
 
 if __name__ == "__main__":
@@ -133,7 +165,9 @@ if __name__ == "__main__":
     #reversed_files = {}
     #orientations = [False] * len(sequence_ids)  # False indicates original orientation
     if args.orientation:
-        orientations = check_and_flip_orientations(sequence_ids, cis_distances, trans_distances)
+        ##CHANGE ALGORITHMS HERE
+        #orientations = check_and_flip_orientations(sequence_ids, cis_distances, trans_distances)
+        orientations = simulated_annealing(sequence_ids, cis_distances, trans_distances)
         reversed_files = {}  # Initialize the dictionary to store paths to reversed files if needed
     
         # Write out the new FASTA files for sequences that need to be reversed
