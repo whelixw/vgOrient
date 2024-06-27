@@ -19,34 +19,31 @@ BASE_DIR="${BASE_DIR%/}"
 for ((i=START_REP; i<=END_REP; i++))
 do
     # Define the directory for the current replicate using the folder prefix
-    
     REP_DIR="${BASE_DIR}/${FOLDER_PREFIX}_${i}"
-	
+    
     # Check if the directory exists
     if [ -d "$REP_DIR" ]; then
         echo "Processing replicate in $REP_DIR..."
 
-
-        # Collect all fasta files in the directory
-        FASTA_FILES="$REP_DIR/*.fasta"
+	FASTA_FILES="${REP_DIR}/*.fasta"
+        # Collect all rotated fasta files in the directory
+        ROTATED_FASTAS_DIR="${REP_DIR}_run_${i}_w512_m256/rotated_fastas"
+        ROTATED_FASTA_FILES="${ROTATED_FASTAS_DIR}/*.fasta.rotated"
 
         # Define output directories for jaccard_dit_wrapper.py outputs
         VG_OUTPUT_DIR="${REP_DIR}_run_${i}"
-        OUTPUT_NAME="${REP_DIR}_${i}_ordering.txt"
+        OUTPUT_NAME="${REP_DIR}_jorder.txt"
 
         # Create output directory if it doesn't exist
-        mkdir -p "$VG_OUTPUT_DIR"
+        #mkdir -p "$VG_OUTPUT_DIR"
 
-        # Command to run the python script with time measurements
-        echo "Running Jaccard Dit Wrapper:"
-        /usr/bin/time -v python3 jaccard_dit_wrapper.py $FASTA_FILES --vg_output_dir $VG_OUTPUT_DIR --output $OUTPUT_NAME --orientation --min_jaccard_init -w 512 -m 256 2>&1 | tee "$REP_DIR/usage_stats.txt"
-
-        ROTATED_FASTAS_DIR="${REP_DIR}_run_${i}_w512_m256/rotated_fastas"
-		
+        # Command to run the jaccard_dit_wrapper.py script with time measurements
+		echo "Running Jaccard Dit Wrapper:"
+		/usr/bin/time -v python3 jaccard_dit_wrapper.py $FASTA_FILES --vg_output_dir $VG_OUTPUT_DIR --output $OUTPUT_NAME --orientation --min_jaccard_init -w 512 -m 256 2>&1 | tee "$REP_DIR/vg_performance_stats_{i}.txt"
+        
         # Concatenate all fasta files into one multifasta file
         MULTIFASTA="${ROTATED_FASTAS_DIR}/combined_${i}.mfa"
-	ROTATED_FASTAS="${ROTATED_FASTAS_DIR}/*.fasta.rotated"
-        cat ${ROTATED_FASTAS} > ${MULTIFASTA}
+        cat ${ROTATED_FASTA_FILES} > ${MULTIFASTA}
 
         # Run MAFFT on the combined multifasta file
         MAFFT_OUTPUT="${REP_DIR}/combined_${i}_mafft_aligned.mfa"
@@ -58,7 +55,7 @@ do
 
         echo "Replicate $i processing complete."
     else
-        echo "Directory $ROTATED_FASTAS_DIR does not exist. Skipping..."
+        echo "Directory $REP_DIR does not exist. Skipping..."
     fi
 done
 

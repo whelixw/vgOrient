@@ -32,27 +32,19 @@ do
         MULTIFASTA="${REP_DIR}/combined_${i}.mfa"
         cat ${FASTA_FILES} > ${MULTIFASTA}
 
-        # Define output file for MARS and log file for time
+        # Define output file for MARS
         MARS_OUTPUT="${REP_DIR}/mars_output_${i}.mfa"
-        TIME_LOG="${REP_DIR}/mars_time_log_${i}.tsv"
-        CMD_OUTPUT="${REP_DIR}/mars_cmd_output_${i}.txt"
 
-        # Time and run MARS on the combined multifasta file
-        ( /usr/bin/time -v mars -a DNA -i ${MULTIFASTA} -o ${MARS_OUTPUT} -m 0 -T 10 2> $TIME_LOG ) > $CMD_OUTPUT
+        # Time and run MARS on the combined multifasta file, output performance stats to a tsv
+        /usr/bin/time -v mars -a DNA -i ${MULTIFASTA} -o ${MARS_OUTPUT} -m 0 -T 10 2>&1 | tee "${REP_DIR}/mars_performance_stats_${i}.txt"
 
-        # Run MAFFT on the MARS output
+        # Run MAFFT on the MARS output, time and log performance
         MAFFT_OUTPUT="${REP_DIR}/mars_mafft_aligned_${i}.mfa"
-        TIME_LOG_MAFFT="${REP_DIR}/mafft_time_log_${i}.tsv"
-        CMD_OUTPUT_MAFFT="${REP_DIR}/mafft_cmd_output_${i}.txt"
+        mafft --retree 2 --maxiterate 0 ${MARS_OUTPUT} > ${MAFFT_OUTPUT} 
 
-        ( /usr/bin/time -v mafft --retree 2 --maxiterate 0 ${MARS_OUTPUT} 2> $TIME_LOG_MAFFT ) > $MAFFT_OUTPUT > $CMD_OUTPUT_MAFFT
-
-        # Run calculate_wentropy.py on the aligned fasta
+        # Run calculate_wentropy.py on the aligned fasta, time and log performance
         WENTROPY_OUTPUT="${REP_DIR}/output_wentropy_${i}.tsv"
-        TIME_LOG_WENTROPY="${REP_DIR}/wentropy_time_log_${i}.tsv"
-        CMD_OUTPUT_WENTROPY="${REP_DIR}/wentropy_cmd_output_${i}.txt"
-
-        ( /usr/bin/time -v python3 calculate_wentropy.py ${MAFFT_OUTPUT} -o ${WENTROPY_OUTPUT} 2> $TIME_LOG_WENTROPY ) > $CMD_OUTPUT_WENTROPY
+        /usr/bin/time -v python3 calculate_wentropy.py ${MAFFT_OUTPUT} -o ${WENTROPY_OUTPUT} 2>&1 | tee "${REP_DIR}/wentropy_performance_${i}.tsv"
 
         echo "Replicate $i processing complete."
     else
