@@ -51,10 +51,10 @@ def read_sequence_data(fasta_file):
         sequence = ''.join(line.strip() for line in file)
     return sequence
 
-def augment_graph(tmp_dir, graph_circ, gam_file):
+def augment_graph(tmp_dir, graph_circ, gam_file, threads):
     """Handles the augmentation and re-indexing of the graph."""
     new_graph = tmp_dir / "new_graph.vg"
-    subprocess_command(["vg", "augment", graph_circ, gam_file, "-i", "-S"], output_file=new_graph)
+    subprocess_command(["vg", "augment", graph_circ, gam_file, "-i", "-S", "-t", threads], output_file=new_graph)
     # Move new graph to replace the old circular graph
     os.replace(new_graph, graph_circ)
     # Re-index the graph
@@ -72,6 +72,7 @@ def main():
     parser.add_argument('-w', '--band_width', type=int, default=512, help='Band width for mapping.')
     parser.add_argument('-m', '--min_match_length', type=int, default=512, help='Minimum match length.')
     parser.add_argument('--append_wm', action='store_true', default=False, help='Append w and m values to the output directory name.')
+    parser.add_argument('-t', '--threads', type=int, default=10, help='Number of threads for map and augment')
 
     args = parser.parse_args()
     fasta_list_filename = args.fasta_list
@@ -110,14 +111,15 @@ def main():
         file_base_name = os.path.splitext(os.path.basename(fasta_file))[0]
         sequence_str = read_sequence_data(fasta_file)
         gam_file = Path('alignments') / f"{file_base_name}.gam"
-        subprocess_command(["vg", "map", "-s", sequence_str, "-V", file_base_name, "-g", str(graph_circ.with_suffix(".gcsa")), "-x", str(graph_circ.with_suffix(".xg")), "-w", str(args.band_width)], output_file=gam_file)
-        augment_graph(tmp_dir, graph_circ, gam_file)
+        subprocess_command(["vg", "map", "-s", sequence_str, "-V", file_base_name, "-g", str(graph_circ.with_suffix(".gcsa")), "-x", str(graph_circ.with_suffix(".xg")), "-w", str(args.band_width), "-t", str(args.threads)], output_file=gam_file)
+        augment_graph(tmp_dir, graph_circ, gam_file, str(args.threads))
 
     # Convert final VG to GFA
     final_gfa_path = output_dir / f"{base_name}_graph.gfa"
     final_odgi_path = output_dir / f"{base_name}_graph.odgi"
     subprocess_command(["vg", "convert", "-f", str(graph_circ)], output_file=final_gfa_path)
-    subprocess_command(["vg_1.44.0", "convert", "-o", str(graph_circ)], output_file=final_odgi_path)
+    
+    #subprocess_command(["vg_1.44.0", "convert", "-o", str(graph_circ)], output_file=final_odgi_path)
 
     print(f"Graph processing completed at {datetime.now()}")
     print(f"All output files are saved in {output_dir}")
