@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Check if all required parameters are passed
-if [ "$#" -ne 4 ]; then
-    echo "Usage: $0 <base_directory> <folder_prefix> <start_replicate> <end_replicate>"
+if [ "$#" -ne 5 ]; then
+    echo "Usage: $0 <base_directory> <folder_prefix> <start_replicate> <end_replicate> <band_width>"
     exit 1
 fi
 
@@ -11,6 +11,8 @@ BASE_DIR="$1"
 FOLDER_PREFIX="$2"
 START_REP="$3"
 END_REP="$4"
+BAND_WIDTH="$5"
+
 
 # Ensure the base directory ends without a slash
 BASE_DIR="${BASE_DIR%/}"
@@ -39,7 +41,7 @@ do
 
         # Command to run the jaccard_dit_wrapper.py script with time measurements
 		echo "Running Jaccard Dit Wrapper:"
-		/usr/bin/time -v python3 jaccard_dit_wrapper.py $FASTA_FILES --vg_output_dir $VG_OUTPUT_DIR --output $OUTPUT_NAME --orientation --min_jaccard_init -w 512 -m 256 2>&1 | tee "$REP_DIR/vg_performance_stats_{i}.txt"
+		/usr/bin/time -v python3 jaccard_dit_wrapper.py $FASTA_FILES --vg_output_dir $VG_OUTPUT_DIR --output $OUTPUT_NAME --orientation --min_jaccard_init -w $BAND_WIDTH -m 256 2>&1 | tee "$REP_DIR/vg_performance_stats_${i}.txt"
         
         # Concatenate all fasta files into one multifasta file
         MULTIFASTA="${ROTATED_FASTAS_DIR}/combined_${i}.mfa"

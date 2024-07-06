@@ -101,7 +101,8 @@ def simulated_annealing(sequence_ids, cis_distances, trans_distances, cooling_ra
 
         if new_total_distance < current_total_distance or math.exp((current_total_distance - new_total_distance) / temp) > random.random():
             # Accept the new orientation
-            print(f"Flipping orientation of {sequence_ids[seq_index]} at temperature {temp}")
+            #print(f"Flipping orientation of {sequence_ids[seq_index]} at temperature {temp}")
+            pass
         else:
             # Revert back if not accepting the new configuration
             orientations[seq_index] = not orientations[seq_index]
@@ -177,7 +178,7 @@ if __name__ == "__main__":
             if orientation:  # If the sequence needs to be reversed or restored
 
                 reversed_file = reverse_fasta(fasta_file, seq_id)
-                print(f"{seq_id} reversed")
+                #print(f"{seq_id} reversed")
                 reversed_files[seq_id] = fasta_file
                 #print(f"{action} sequence {seq_id} saved to {reversed_file}")
             else:
@@ -208,7 +209,7 @@ output_file_path = args.output_file
 with open(output_file_path, "w") as output_file:
     for seq_id in ordered_sequence_ids:
         fasta_path = reversed_files[seq_id]
-        print(fasta_path)
+        #print(fasta_path
         absolute_path = Path(fasta_path).absolute()  # Converts to absolute path
         output_file.write(f"{absolute_path}\n")
     print("Process completed. Check 'kmer_output.txt' for the ordered FASTA file paths.")
