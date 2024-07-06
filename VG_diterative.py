@@ -94,7 +94,7 @@ def main():
     graph_circ = Path(f"{base_name}_graph_circ.vg")
 
     initial_output = tmp_dir / f"{base_name}_initial_output.vg"
-    subprocess_command(["vg", "construct", "-r", initial_fasta, "-m", str(args.min_match_length)], output_file=initial_output)
+    subprocess_command(["vg", "construct", "-r", initial_fasta, "-m", str(args.min_match_length), "-t", str(args.threads)], output_file=initial_output)
     circular_output = tmp_dir / f"{base_name}_circularized.vg"
     subprocess_command(["vg", "circularize", "-p", base_name, str(initial_output)], output_file=circular_output)
     os.replace(circular_output, graph_circ)  # Replace the original graph with the circularized version
@@ -117,8 +117,10 @@ def main():
     # Convert final VG to GFA
     final_gfa_path = output_dir / f"{base_name}_graph.gfa"
     final_odgi_path = output_dir / f"{base_name}_graph.odgi"
+    #threads should be max threads by default, so no need to add -t
+    #subprocess_command(["vg", "convert", "-f", str(graph_circ), "-t", str(args.threads)], output_file=final_gfa_path)
     subprocess_command(["vg", "convert", "-f", str(graph_circ)], output_file=final_gfa_path)
-    
+
     #subprocess_command(["vg_1.44.0", "convert", "-o", str(graph_circ)], output_file=final_odgi_path)
 
     print(f"Graph processing completed at {datetime.now()}")
