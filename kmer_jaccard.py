@@ -165,28 +165,26 @@ if __name__ == "__main__":
     # Initialize the dictionary to store paths to reversed files
     #reversed_files = {}
     #orientations = [False] * len(sequence_ids)  # False indicates original orientation
-    if args.orientation:
-        ##CHANGE ALGORITHMS HERE
-        #orientations = check_and_flip_orientations(sequence_ids, cis_distances, trans_distances)
-        orientations = simulated_annealing(sequence_ids, cis_distances, trans_distances)
-        reversed_files = {}  # Initialize the dictionary to store paths to reversed files if needed
-    
-        # Write out the new FASTA files for sequences that need to be reversed
-        for i, orientation in enumerate(orientations):
-            seq_id = sequence_ids[i]
-            fasta_file = get_fasta_file_for_seq_id(fasta_files, seq_id)
-            if orientation:  # If the sequence needs to be reversed or restored
+    #if args.orientation:
+    ##CHANGE ALGORITHMS HERE
+    #orientations = check_and_flip_orientations(sequence_ids, cis_distances, trans_distances)
+    orientations = simulated_annealing(sequence_ids, cis_distances, trans_distances)
+    reversed_files = {}  # Initialize the dictionary to store paths to reversed files if needed
+    # Write out the new FASTA files for sequences that need to be reversed
+    for i, orientation in enumerate(orientations):
+        seq_id = sequence_ids[i]
+        fasta_file = get_fasta_file_for_seq_id(fasta_files, seq_id)
+        if orientation and args.orientation:  # If the sequence needs to be reversed or restored
+            reversed_file = reverse_fasta(fasta_file, seq_id)
+            #print(f"{seq_id} reversed")
+            reversed_files[seq_id] = fasta_file
+            #print(f"{action} sequence {seq_id} saved to {reversed_file}")
+        else:
+            reversed_files[seq_id] = fasta_file
 
-                reversed_file = reverse_fasta(fasta_file, seq_id)
-                #print(f"{seq_id} reversed")
-                reversed_files[seq_id] = fasta_file
-                #print(f"{action} sequence {seq_id} saved to {reversed_file}")
-            else:
-                reversed_files[seq_id] = fasta_file
-
-    else:
-        orientations = [False] * len(sequence_ids)  # All sequences remain in original orientation
-        reversed_files = {seq_id: get_fasta_file_for_seq_id(fasta_files, seq_id) for seq_id in sequence_ids}
+    #else:
+    #    orientations = [False] * len(sequence_ids)  # All sequences remain in original orientation
+    #    reversed_files = {seq_id: get_fasta_file_for_seq_id(fasta_files, seq_id) for seq_id in sequence_ids}
     
     # Decide the initial sequence based on cumulative Jaccard distances if the relevant argument is provided
 if args.min_jaccard_init:
