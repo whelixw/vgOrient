@@ -70,7 +70,7 @@ def main():
     parser.add_argument('fasta_list', help='Text file containing the list of FASTA files to process.')
     parser.add_argument('-o', '--output_dir_name', help='The name of the output directory.', default='output_graphs')
     parser.add_argument('-w', '--band_width', type=int, default=512, help='Band width for mapping.')
-    parser.add_argument('-m', '--min_match_length', type=int, default=512, help='Minimum match length.')
+    parser.add_argument('-m', '--max_node_length', type=int, default=512, help='Max node length for constructing graph')
     parser.add_argument('--append_wm', action='store_true', default=False, help='Append w and m values to the output directory name.')
     parser.add_argument('-t', '--threads', type=int, default=10, help='Number of threads for map and augment')
 
