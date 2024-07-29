@@ -38,6 +38,40 @@ def generate_kmers(seq, k):
     reverse_kmers = set(circular_seq_reverse[i:i + k] for i in range(len(seq)))
     return forward_kmers, reverse_kmers
 
+
+def generate_2mer_counts(seq):
+    """Generate 2-mer counts for both forward and reverse (complement) orientations of a sequence."""
+    k = 2
+    forward_counts = {}
+    reverse_counts = {}
+
+    # Generate forward 2-mers
+    for i in range(len(seq) - k + 1):
+        kmer = seq[i:i + k]
+        if kmer in forward_counts:
+            forward_counts[kmer] += 1
+        else:
+            forward_counts[kmer] = 1
+
+    # Generate reverse complement of the sequence
+    reverse_seq = str(Seq(seq).reverse_complement())
+    # Generate reverse 2-mers
+    for i in range(len(reverse_seq) - k + 1):
+        kmer = reverse_seq[i:i + k]
+        if kmer in reverse_counts:
+            reverse_counts[kmer] += 1
+        else:
+            reverse_counts[kmer] = 1
+
+    return forward_counts, reverse_counts
+
+def calc_abs_diff(counts1, counts2):
+    """Calculate the sum of absolute differences of 2-mer counts."""
+    all_kmers = set(counts1.keys()).union(set(counts2.keys()))
+    total_diff = sum(abs(counts1.get(k, 0) - counts2.get(k, 0)) for k in all_kmers)
+    return total_diff
+
+
 def calculate_jaccard_distance(set1, set2):
     intersection = len(set1.intersection(set2))
     union = len(set1.union(set2))
@@ -138,6 +172,7 @@ if __name__ == "__main__":
     parser.add_argument('-mcj', '--min_jaccard_init', action='store_true', help='Select initial sequence based on minimum cumulative Jaccard distance')
     parser.add_argument('-o', '--output_file', type=str, default='kmer_output.txt', help='Output file path (default: "kmer_output.txt")')
     parser.add_argument('-or','--orientation', action='store_true', help='Optimize sequence orientations based on Jaccard distances')
+    parser.add_argument('-m', '--method', choices=['jaccard', 'abs_diff'], default='jaccard', help='Method to calculate distances: "jaccard" for Jaccard distance of k-mers or "abs_diff" for sum of absolute differences of 2-mers')
     #parser.add_argument('--log_dir', help='Directory to save the log file indicating reversed sequences. If not provided, uses the parent directory of the first FASTA file.')
     args = parser.parse_args()
 
@@ -154,13 +189,25 @@ if __name__ == "__main__":
     sequence_ids = list(kmers_per_sequence.keys())
     cis_distances = np.zeros((len(sequence_ids), len(sequence_ids)))
     trans_distances = np.zeros((len(sequence_ids), len(sequence_ids)))
-
-    for i, j in combinations(range(len(sequence_ids)), 2):
-        forward_kmers_i, reverse_kmers_i = kmers_per_sequence[sequence_ids[i]]
-        forward_kmers_j, reverse_kmers_j = kmers_per_sequence[sequence_ids[j]]
-        cis_dist, trans_dist = calculate_jaccard_distances(forward_kmers_i, reverse_kmers_i, forward_kmers_j, reverse_kmers_j)
-        cis_distances[i, j] = cis_distances[j, i] = cis_dist
-        trans_distances[i, j] = trans_distances[j, i] = trans_dist
+    if args.method == 'abs_diff':
+    # Calculate distances using absolute differences of 2-mer counts
+        for i, j in combinations(range(len(sequence_ids)), 2):
+            forward_counts_i, reverse_counts_i = generate_2mer_counts(str(kmers_per_sequence[sequence_ids[i]][0]))
+            forward_counts_j, reverse_counts_j = generate_2mer_counts(str(kmers_per_sequence[sequence_ids[j]][0]))
+        
+            # Calculate distances for both forward-forward and forward-reverse (trans) scenarios
+            cis_dist = calc_abs_diff(forward_counts_i, forward_counts_j)
+            trans_dist = calc_abs_diff(forward_counts_i, reverse_counts_j)
+        
+            cis_distances[i, j] = cis_distances[j, i] = cis_dist
+            trans_distances[i, j] = trans_distances[j, i] = trans_dist
+    else:
+        for i, j in combinations(range(len(sequence_ids)), 2):
+            forward_kmers_i, reverse_kmers_i = kmers_per_sequence[sequence_ids[i]]
+            forward_kmers_j, reverse_kmers_j = kmers_per_sequence[sequence_ids[j]]
+            cis_dist, trans_dist = calculate_jaccard_distances(forward_kmers_i, reverse_kmers_i, forward_kmers_j, reverse_kmers_j)
+            cis_distances[i, j] = cis_distances[j, i] = cis_dist
+            trans_distances[i, j] = trans_distances[j, i] = trans_dist
 
     # Initialize the dictionary to store paths to reversed files
     #reversed_files = {}
