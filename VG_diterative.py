@@ -63,7 +63,8 @@ def augment_graph(tmp_dir, graph_circ, gam_file, threads):
     subprocess_command(["vg", "index", "-g", graph_circ.with_suffix(".gcsa"), "-Z", "400", str(graph_circ) + "_pruned.vg"])
 
 def main():
-    print(datetime.now())
+    last_time = datetime.now()
+    print(last_time)
     print(Path.cwd().resolve())
 
     parser = argparse.ArgumentParser(description='Script to process a list of FASTA files and generate output graphs.')
@@ -76,7 +77,7 @@ def main():
 
     args = parser.parse_args()
     fasta_list_filename = args.fasta_list
-    output_dir = prepare_output_directory(Path.cwd(), args.band_width, args.min_match_length, args.append_wm, args.output_dir_name)
+    output_dir = prepare_output_directory(Path.cwd(), args.band_width, args.max_node_length, args.append_wm, args.output_dir_name)
 
     with open(fasta_list_filename, 'r') as file:
         fasta_files = [line.strip() for line in file.readlines() if line.strip()]
@@ -94,7 +95,7 @@ def main():
     graph_circ = Path(f"{base_name}_graph_circ.vg")
 
     initial_output = tmp_dir / f"{base_name}_initial_output.vg"
-    subprocess_command(["vg", "construct", "-r", initial_fasta, "-m", str(args.min_match_length), "-t", str(args.threads)], output_file=initial_output)
+    subprocess_command(["vg", "construct", "-r", initial_fasta, "-m", str(args.max_node_length), "-t", str(args.threads)], output_file=initial_output)
     circular_output = tmp_dir / f"{base_name}_circularized.vg"
     subprocess_command(["vg", "circularize", "-p", base_name, str(initial_output)], output_file=circular_output)
     os.replace(circular_output, graph_circ)  # Replace the original graph with the circularized version
@@ -109,6 +110,8 @@ def main():
     # Map, augment, and update stats for other FASTA files
     for fasta_file in fasta_files[1:]:
         file_base_name = os.path.splitext(os.path.basename(fasta_file))[0]
+        print(f"mapping: {file_base_name}")
+        print(f"time: {datetime.now()}, diff: {datetime.now()-last_time}")
         sequence_str = read_sequence_data(fasta_file)
         gam_file = Path('alignments') / f"{file_base_name}.gam"
         subprocess_command(["vg", "map", "-s", sequence_str, "-V", file_base_name, "-g", str(graph_circ.with_suffix(".gcsa")), "-x", str(graph_circ.with_suffix(".xg")), "-w", str(args.band_width), "-t", str(args.threads)], output_file=gam_file)
@@ -125,7 +128,7 @@ def main():
 
     print(f"Graph processing completed at {datetime.now()}")
     print(f"All output files are saved in {output_dir}")
-    
+
     new_dir_name = "intermediate"
     new_path = os.path.join(output_dir, new_dir_name)
     move_directory(tmp_dir, new_path)
