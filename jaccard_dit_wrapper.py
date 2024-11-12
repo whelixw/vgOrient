@@ -45,7 +45,7 @@ def main():
 
     # Running kmer_jaccard.py
     start_time = time.time()
-    kmer_cmd = ['python3', 'kmer_jaccard.py']
+    kmer_cmd = ['kmer_jaccard.py']
     if args.kmer_size:
         kmer_cmd.extend(['-k', args.kmer_size])
     if args.orientation:
@@ -63,7 +63,7 @@ def main():
 
     # Running VG_diterative.py
     start_time = time.time()
-    vg_cmd = ['python3', 'VG_diterative.py', '-o', output_dir, args.output, '-w', str(args.band_width), '-m', str(args.min_match_length)]
+    vg_cmd = ['VG_diterative.py', '-o', output_dir, args.output, '-w', str(args.band_width), '-m', str(args.min_match_length)]
     if args.append_wm:
         vg_cmd.append('--append_wm')
     subprocess.run(vg_cmd)
@@ -79,7 +79,7 @@ def main():
         logging.error("No GFA files found.")
         return
 
-    rotation_cmd = ['python3', 'cut_and_rot.py', gfa_files[0],'--output_dir', fasta_output_dir]
+    rotation_cmd = ['cut_and_rot.py', gfa_files[0],'--output_dir', fasta_output_dir]
     if args.vg_orient:
         rotation_cmd.append("--orient")
     rotation_cmd.extend(args.input_files)

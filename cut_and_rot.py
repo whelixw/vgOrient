@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import networkx as nx
 from Bio import SeqIO
 from Bio.Seq import Seq
