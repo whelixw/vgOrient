@@ -9,7 +9,7 @@ STEP 2:
 STEP 3:
     conda build meta.yaml
 STEP 4:
-    conda create -n mitographs-test mitographs --use-local
-    conda activate mitographs-test
+    conda create -n vgOrient-env vgoreint --use-local
+    conda activate vgOrient-env
 STEP 5:
     jaccard_dit_wrapper.py  suina/*.fasta --vg_output_dir VG_OUTPUT_DIR --output OUTPUT_NAME --orientation --min_jaccard_init -w 512 -m 256

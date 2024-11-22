@@ -1,4 +1,4 @@
-{% set name = "mitographs" %}
+{% set name = "vgorient" %}
 {% set version = "0.1.0" %}
 
 package:
@@ -6,7 +6,7 @@ package:
   version: "{{ version }}"
 
 source:
-  git_url: "https://github.com/whelixw/mitographs.git"
+  git_url: "https://github.com/whelixw/vgOrient.git"
   git_rev: "develop"
 
 build:
@@ -41,7 +41,7 @@ test:
     - jaccard_dit_wrapper.py --help
 
 about:
-  home: "https://github.com/whelixw/mitographs"
+  home: "https://github.com/whelixw/vgOrient"
   license: "MIT"
   summary: "Scripts for processing mitochondrial graphs."
 
