@@ -12,4 +12,4 @@ STEP 4:
     conda create -n vgOrient-env vgoreint --use-local
     conda activate vgOrient-env
 STEP 5:
-    jaccard_dit_wrapper.py  suina/*.fasta --vg_output_dir VG_OUTPUT_DIR --output OUTPUT_NAME --orientation --min_jaccard_init -w 512 -m 256
+    jaccard_dit_wrapper.py  datasets/suina/*.fasta --vg_output_dir VG_OUTPUT_DIR --output OUTPUT_NAME --orientation --min_jaccard_init -w 512 -m 256

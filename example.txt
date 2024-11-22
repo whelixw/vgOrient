@@ -1,0 +1,1 @@
+python3 jaccard_dit_wrapper.py FASTA_FILES --vg_output_dir VG_OUTPUT_DIR --output OUTPUT_NAME --orientation --min_jaccard_init -w 512 -m 256
